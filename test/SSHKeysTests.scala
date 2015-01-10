@@ -15,17 +15,12 @@ class SSHKeysTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll  
   override def afterAll() {
     running(FakeApplication()) {
       try {
-        if (sshKeyId != 0) {
-          val SShKeyResponse = await(gitlabAPI.deleteSSHKey(sshKeyId))
-          GitlabHelper.statusCheck(SShKeyResponse, "SSH KEY", sshKeyId)
-        }
-        super.afterAll()
+        val SShKeyResponse = await(gitlabAPI.deleteSSHKey(sshKeyId))
+        GitlabHelper.statusCheckError(SShKeyResponse, "SSH Key", sshKeyId)
       } catch {
         case e: UnsupportedOperationException => logger.error(e.toString)
       }
-      finally {
-        logger.debug("End of GitlabAPI SSHKeys tests")
-      }
+      logger.debug("End of GitlabAPI SSHKeys tests")
     }
   }
 
@@ -37,7 +32,7 @@ class SSHKeysTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll  
       sshKeyId = (response.json \ "id").as[Int]
       (response.json \ "title").as[String] must be(sshKeyTitle)
     }
-    
+
     "get SSH keys" in {
       val response = await(gitlabAPI.getSSHKeys)
       response.status must be(200)
@@ -52,6 +47,5 @@ class SSHKeysTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll  
     "delete SSH key" in {
       await(gitlabAPI.deleteSSHKey(sshKeyId)).status must be(200)
     }
-
   }
 }

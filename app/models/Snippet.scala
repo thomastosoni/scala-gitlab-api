@@ -10,7 +10,7 @@ case class Snippet(title: String,
 object Snippet {
   implicit val snippetReader: Reads[Snippet] = (
     (__ \ "title").read[String] and
-      (__ \ 'fileName).read[String] and
+      (__ \ 'file_name).read[String] and
       (__ \ 'code).read[String]
     )(Snippet.apply _)
 }

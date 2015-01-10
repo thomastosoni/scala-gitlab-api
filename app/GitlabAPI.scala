@@ -193,12 +193,8 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
    * Team
    */
 
-  def getTeamMembers(projectId: Int): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectId + "/members").withHeaders(authToken).get()
-  }
-
-  def getTeamMembers(projectId: Int, query: String): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectId + "/members").withHeaders(authToken).withQueryString("query" -> query).get()
+  def getTeamMembers(projectId: Int, query: Option[String] = None): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/members").withHeaders(authToken).withQueryString("query" -> query.orNull).get()
   }
 
   //TODO check this works
@@ -262,21 +258,23 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
     WS.url(gitlabUrl + "/projects/" + projectId + "/repository/branches/" + branch).withHeaders(authToken).get()
   }
 
-  //  def protectBranch(projectId: Int, branch: String): Future[WSResponse] = {
-  //    WS.url(gitlabUrl + "/projects/" + projectId + "/repository/branches" + branch + "/protect").withHeaders(authToken).put()
-  //  }
-  //
-  //  def unprotectBranch(projectId: Int, branch: String): Future[WSResponse] = {
-  //    WS.url(gitlabUrl + "/projects/" + projectId + "/repository/branches" + branch + "/unprotect").withHeaders(authToken).put()
-  //  }
+  def protectBranch(projectId: Int, branchName: String): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/repository/branches/" + branchName + "/protect").withHeaders(authToken)
+      .put(Json.obj("branch_name" -> branchName))
+  }
 
-  def createBranch(projectId: Int, branch: String, ref: String): Future[WSResponse] = {
-    val newBranch = ("branch_name" -> branch) ~ ("ref" -> ref)
+  def unprotectBranch(projectId: Int, branchName: String): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/repository/branches/" + branchName + "/unprotect").withHeaders(authToken)
+      .put(Json.obj("branch_name" -> branchName))
+  }
+
+  def createBranch(projectId: Int, branchName: String, ref: String): Future[WSResponse] = {
+    val newBranch = ("branch_name" -> branchName) ~ ("ref" -> ref)
     WS.url(gitlabUrl + "/projects/" + projectId + "/repository/branches").withHeaders(authToken).post(newBranch)
   }
 
-  def deleteBranch(projectId: Int, branch: String): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectId + "/repository/branches/" + branch).withHeaders(authToken).delete()
+  def deleteBranch(projectId: Int, branchName: String): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/repository/branches/" + branchName).withHeaders(authToken).delete()
   }
 
   /**
@@ -306,8 +304,8 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
                     title: Option[String] = None,
                     fileName: Option[String] = None,
                     code: Option[String] = None): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectId + "/snippets/").withHeaders(authToken)
-      .post(Extraction.decompose(Snippet(title.get, fileName.get, code.get)).underscoreKeys)
+    WS.url(gitlabUrl + "/projects/" + projectId + "/snippets/" + snippetId).withHeaders(authToken)
+      .put(Extraction.decompose(Snippet(title.orNull, fileName.orNull, code.orNull)).underscoreKeys)
   }
 
   def deleteSnippet(projectId: Int, snippetId: Int): Future[WSResponse] = {
@@ -327,13 +325,13 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
       .post(Extraction.decompose(Tag(tagName, ref, message)).underscoreKeys)
   }
 
-  //TODO add path, ref_name
-  def getRepositoryTree(projectId: Int): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectId + "/repository/tree").withHeaders(authToken).get()
+  def getRepositoryTree(projectId: Int, path: Option[String] = None, ref_name: Option[String] = None): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/repository/tree").withHeaders(authToken)
+      .withQueryString("path" -> path.orNull, "ref_name" -> ref_name.orNull).get()
   }
 
-  def getRawFileContent(projectId: Int, sha: String, filePath: String): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectId + "/repository/blobs/" + sha).withHeaders(authToken)
+  def getRawFileContent(projectId: Int, commitSHAOrBranchName: String, filePath: String): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/repository/blobs/" + commitSHAOrBranchName).withHeaders(authToken)
       .withQueryString("filepath" -> filePath).get()
   }
 
@@ -355,7 +353,7 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
   }
 
   /**
-   * Repository Files
+   * Files
    */
 
   def getFile(projectId: Int, filePath: String, ref: String): Future[WSResponse] = {
@@ -503,9 +501,8 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
       .post(Extraction.decompose(Issue(title, description, assigneeId, milestoneId, labels, None)).underscoreKeys)
   }
 
-  /**
-   * To delete and issue, set the stateEvent to 'closed'
-   */
+
+  // To delete an issue, set the stateEvent to 'closed'
   def updateIssue(projectId: Int,
                   issueId: Int,
                   title: String,

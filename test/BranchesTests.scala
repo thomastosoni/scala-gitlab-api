@@ -10,53 +10,63 @@ class BranchesTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll 
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val projectName = GitlabHelper.projectName
-  var projectId = 0
+  var projectId = -1
+  var commitSHA = ""
 
   override def beforeAll(): Unit = {
     running(FakeApplication()) {
-      projectId = GitlabHelper.createProject
-      logger.debug("Starting Branches tests")
+      GitlabHelper.createTestSSHKey
+      projectId = GitlabHelper.createTestProject
+      logger.debug("Starting Branch Tests")
     }
   }
 
   override def afterAll() {
     running(FakeApplication()) {
       try {
-        if (projectId != 0) {
-          val response = await(gitlabAPI.deleteProject(projectId))
-          GitlabHelper.statusCheck(response, "Project", projectId)
-        }
+        val response = await(gitlabAPI.deleteBranch(projectId, "test_branch_name"))
+        GitlabHelper.statusCheckError(response, "Branch", -1)
         super.afterAll()
       } catch {
         case e: UnsupportedOperationException => logger.error(e.toString)
       }
-      logger.debug("End of GitlabAPI Branches tests")
+      GitlabHelper.deleteTestSSHKey()
+      GitlabHelper.deleteTestProject()
+      logger.debug("End of GitlabAPI Branch Tests")
     }
   }
 
   "GitlabAPI must manage project branches" should {
 
-    //    "get all branches" in {
-    //      val response = await(gitlabAPI.getBranches(projectId))
-    //      logger.error(" ---------> " + response.body)
-    //      response.status must be(200)
-    //    }
-
-    "get one branch" in {
-      val response = await(gitlabAPI.getBranch(projectId, "master"))
-      logger.error(" ---------> " + response.body)
+    "get all branches" in {
+      val response = await(gitlabAPI.getBranches(projectId))
       response.status must be(200)
     }
 
-    //    "create a new branch" in {
-    //      val response = await(gitlabAPI.createBranch(projectId, "new_branch", "0b4bc9a49b562e85de7cc9e834518ea6828729b9"))
-    //      logger.error(" ---------> " + response.body)
-    //      response.status must be(201)
-    //    }
+    "get one branch" in {
+      val response = await(gitlabAPI.getBranch(projectId, "master"))
+      response.status must be(200)
+      commitSHA = (response.json \ "commit" \ "id").as[String]
+    }
 
-  }
+    "protect a branch" in {
+      await(gitlabAPI.protectBranch(projectId, "master")).status must be(200)
+    }
 
-  "Tests cleanup" in {
-    gitlabAPI.deleteProject(projectId)
+    "unprotect a branch" in {
+      await(gitlabAPI.unprotectBranch(projectId, "master")).status must be(200)
+    }
+
+    "create a new branch" in {
+      val response = await(gitlabAPI.createBranch(projectId, "test_branch_name", commitSHA))
+      response.status must be(201)
+    }
+
+    "delete a branch" in {
+      val response = await(gitlabAPI.deleteBranch(projectId, "test_branch_name"))
+      response.status must be(200)
+      response.json must not be null
+    }
+
   }
 }

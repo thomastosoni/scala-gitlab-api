@@ -17,33 +17,24 @@ class HooksTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = {
     running(FakeApplication()) {
-      projectId = GitlabHelper.createProject
-      logger.debug("Starting team tests")
+      projectId = GitlabHelper.createEmptyTestProject
+      logger.debug("Starting Team Tests")
     }
   }
 
   override def afterAll() {
     running(FakeApplication()) {
       try {
-        if (systemHookId != 0) {
-          val systemHookResponse = await(gitlabAPI.deleteHook(systemHookId))
-          GitlabHelper.statusCheck(systemHookResponse, "System Hook", systemHookId)
-        }
-        if (projectId != 0) {
-          val projectResponse = await(gitlabAPI.deleteProject(projectId))
-          GitlabHelper.statusCheck(projectResponse, "Project", projectId)
-          if (projectHookId != 0) {
-            val systemHookResponse = await(gitlabAPI.deleteHook(projectId, projectHookId))
-            GitlabHelper.statusCheck(systemHookResponse, "Project Hook", projectHookId)
-          }
-        }
+        val systemHookResponse = await(gitlabAPI.deleteHook(systemHookId))
+        GitlabHelper.statusCheckError(systemHookResponse, "System Hook", systemHookId)
+        val projectHookResponse = await(gitlabAPI.deleteHook(projectId, projectHookId))
+        GitlabHelper.statusCheckError(projectHookResponse, "Project Hook", projectHookId)
         super.afterAll()
       } catch {
         case e: UnsupportedOperationException => logger.error(e.toString)
       }
-      finally {
-        logger.debug("End of GitlabAPI Hooks tests")
-      }
+      GitlabHelper.deleteTestProject()
+      logger.debug("End of GitlabAPI Hooks tests")
     }
   }
 
@@ -91,9 +82,5 @@ class HooksTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
       response.json must not be null
     }
 
-  }
-
-  "Tests cleanup" in {
-    gitlabAPI.deleteProject(projectId)
   }
 }

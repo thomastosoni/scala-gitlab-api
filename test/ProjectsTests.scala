@@ -20,7 +20,6 @@ class ProjectsTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll 
           val response = await(gitlabAPI.deleteProject(projectId))
           GitlabHelper.statusCheck(response, "Project", projectId)
         }
-        super.afterAll()
       } catch {
         case e: UnsupportedOperationException => logger.error("Couldn't delete project with id: " + projectId)
       }
@@ -68,9 +67,4 @@ class ProjectsTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll 
   }
 }
 
-//      TODO
-//      "fork another user's project" in {
-//        response = await(gitlabAPI.forkProject(projectId))
-//        response.status must be(200)
-//        (response.json \ "id").as[Int] must not be projectId
-//      }
+// TODO fork

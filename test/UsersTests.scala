@@ -13,22 +13,18 @@ class UsersTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   val userUsername = GitlabHelper.userUsername
   val email = GitlabHelper.email
   val password = GitlabHelper.password
-  var userId = 0
+  var userId = -1
 
   override def afterAll() {
     running(FakeApplication()) {
       try {
-        if (userId != 0) {
-          val response = await(gitlabAPI.deleteUser(userId))
-          GitlabHelper.statusCheck(response, "User", userId)
-        }
+        val response = await(gitlabAPI.deleteUser(userId))
+        GitlabHelper.statusCheckError(response, "User", userId)
         super.afterAll()
       } catch {
         case e: UnsupportedOperationException => logger.error(e.toString)
       }
-      finally {
-        logger.debug("End of GitlabAPI Users tests")
-      }
+      logger.debug("End of GitlabAPI Users tests")
     }
   }
 

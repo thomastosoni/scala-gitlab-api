@@ -10,29 +10,22 @@ class CommitsTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val projectName = GitlabHelper.projectName
-  var projectId = 0
-  var lastCommitSha = ""
+  var projectId = -1
+  var commitSHA = ""
 
   override def beforeAll(): Unit = {
     running(FakeApplication()) {
-      await(gitlabAPI.addSSHKey("SSH Key Test", GitlabHelper.sshKey))
-      projectId = GitlabHelper.createProject
-      logger.debug("Starting Branches tests")
+      GitlabHelper.createTestSSHKey
+      projectId = GitlabHelper.createTestProject
+      logger.debug("Starting Commit Tests")
     }
   }
 
   override def afterAll() {
     running(FakeApplication()) {
-      try {
-        if (projectId != 0) {
-          val response = await(gitlabAPI.deleteProject(projectId))
-          GitlabHelper.statusCheck(response, "Project", projectId)
-        }
-        super.afterAll()
-      } catch {
-        case e: UnsupportedOperationException => logger.error(e.toString)
-      }
-      logger.debug("End of GitlabAPI Branches tests")
+      GitlabHelper.deleteTestProject()
+      GitlabHelper.deleteTestSSHKey()
+      logger.debug("End of GitlabAPI Branch Tests")
     }
   }
 
@@ -41,30 +34,26 @@ class CommitsTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
     "get all commits" in {
       val response = await(gitlabAPI.getCommits(projectId))
       response.status must be(200)
-      lastCommitSha = (response.json \\ "id").map(_.as[String]).head
+      commitSHA = (response.json \\ "id").map(_.as[String]).head
     }
 
     "get one commit" in {
-      val response = await(gitlabAPI.getCommit(projectId, lastCommitSha))
+      val response = await(gitlabAPI.getCommit(projectId, commitSHA))
       response.status must be(200)
       response.json must not be null
     }
 
     "get a commit diff" in {
-      await(gitlabAPI.getDiff(projectId, lastCommitSha)).status must be(200)
+      await(gitlabAPI.getDiff(projectId, commitSHA)).status must be(200)
     }
 
     "add comment to commit" in {
-      await(gitlabAPI.addCommitComments(projectId, lastCommitSha, "test_comment")).status must be(201)
+      await(gitlabAPI.addCommitComments(projectId, commitSHA, "test_comment")).status must be(201)
     }
 
     "get commit comments" in {
-      await(gitlabAPI.getCommitComments(projectId, lastCommitSha)).status must be(200)
+      await(gitlabAPI.getCommitComments(projectId, commitSHA)).status must be(200)
     }
-  }
-
-  "Tests cleanup" in {
-    gitlabAPI.deleteProject(projectId)
   }
 
 }
