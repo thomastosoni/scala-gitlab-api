@@ -1,14 +1,13 @@
 package models
 
-
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 case class File(filePath: String,
-                 branchName: String,
-                 content: String,
-                 commitMessage: String,
-                 encoding: Option[String] = "text")
+                branchName: String,
+                content: String,
+                commitMessage: String,
+                encoding: Option[String] = Option("base64"))
 
 object File {
   implicit val fileReader: Reads[File] = (
