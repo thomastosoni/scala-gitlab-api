@@ -1,0 +1,82 @@
+import org.scalatest.BeforeAndAfterAll
+import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import play.api.Logger
+import play.api.test.FakeApplication
+import play.api.test.Helpers._
+
+class GroupTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+  implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
+  lazy val logger = Logger(classOf[GroupTests])
+
+  val gitlabAPI = GitlabHelper.gitlabAPI
+  val projectName = GitlabHelper.projectName
+
+  val groupName = "Test Group"
+  val groupPath= "group"
+  var projectId = -1
+  var groupId = -1
+  var userId = -1
+
+  override def beforeAll(): Unit = {
+    running(FakeApplication()) {
+      projectId = GitlabHelper.createEmptyTestProject
+      userId = GitlabHelper.createTestUser
+      logger.debug("Starting Group Tests")
+    }
+  }
+
+  override def afterAll() {
+    running(FakeApplication()) {
+      try {
+        val response = await(gitlabAPI.deleteGroup(groupId))
+        GitlabHelper.statusCheckError(response, "Group", groupId)
+      } catch {
+        case e: IllegalStateException => logger.error(e.toString)
+      }
+      GitlabHelper.deleteTestProject()
+      GitlabHelper.deleteTestUser()
+      logger.debug("End of Group Tests")
+      Thread.sleep(1000L)
+    }
+  }
+
+  "GitlabAPI must manage groups" should {
+
+    "add a group" in {
+      val response = await(gitlabAPI.addGroup(groupName, groupPath))
+      response.status must be(201)
+      groupId = (response.json \ "id").as[Int]
+    }
+
+    "get all groups" in {
+      await(gitlabAPI.getGroups).status must be(200)
+    }
+
+    "get a group" in {
+      await(gitlabAPI.getGroup(groupId)).status must be(200)
+    }
+
+    "transfer project to group" in {
+      await(gitlabAPI.transferProjectToGroup(groupId, projectId)).status must be(201)
+    }
+
+    "add group member" in {
+      await(gitlabAPI.addGroupMember(groupId, userId, 40)).status must be(201)
+    }
+
+    "get group member" in {
+      await(gitlabAPI.getGroupMembers(groupId)).status must be(200)
+    }
+
+    "remove group member" in {
+      await(gitlabAPI.removeGroupMember(groupId, userId)).status must be(200)
+    }
+
+    "delete group" in {
+      val response = await(gitlabAPI.deleteGroup(groupId))
+      response.status must be(200)
+      response.json must not be null
+    }
+  }
+
+}

@@ -144,7 +144,7 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
 
   def getProject(projectName: String, perPage: Option[String], page: Option[String]): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/search/" + projectName).withHeaders(authToken)
-      .withQueryString("per_page" -> perPage.get, "page" -> page.get).get()
+      .withQueryString("per_page" -> perPage.orNull, "page" -> page.orNull).get()
   }
 
   def getProjectEvents(projectId: Int): Future[WSResponse] = {
@@ -155,15 +155,14 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
                     path: Option[String] = None,
                     namespaceId: Option[Int] = None,
                     description: Option[String] = None,
-                    issuesEnabled: Boolean = false,
-                    mergeRequestsEnabled: Boolean = false,
-                    wikiEnabled: Boolean = false,
-                    snippetsEnabled: Boolean = false,
-                    public: Boolean = false,
+                    issuesEnabled: Option[Boolean] = None,
+                    mergeRequestsEnabled: Option[Boolean] = None,
+                    wikiEnabled: Option[Boolean] = None,
+                    snippetsEnabled: Option[Boolean] = None,
+                    public: Option[Boolean] = None,
                     visibilityLevel: Option[Int] = None,
                     importUrl: Option[String] = None): Future[WSResponse] = {
-    val query = WS.url(gitlabUrl + "/projects").withHeaders(authToken)
-    query.post(Extraction.decompose(
+    WS.url(gitlabUrl + "/projects").withHeaders(authToken).post(Extraction.decompose(
       Project(
         name,
         path,
@@ -366,7 +365,7 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
                  branchName: String,
                  content: String,
                  commitMessage: String,
-                 encoding: Option[String]): Future[WSResponse] = {
+                 encoding: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/repository/files").withHeaders(authToken)
       .post(Extraction.decompose(File(filePath, branchName, content, commitMessage, encoding)).underscoreKeys)
   }
@@ -376,14 +375,17 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
                  branchName: String,
                  content: String,
                  commitMessage: String,
-                 encoding: Option[String]): Future[WSResponse] = {
+                 encoding: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/repository/files").withHeaders(authToken)
       .put(Extraction.decompose(File(filePath, branchName, content, commitMessage, encoding)).underscoreKeys)
   }
 
-  def deleteFile(projectId: Int, filePath: String, branchName: String, commitMessage: String) = {
+  def deleteFile(projectId: Int,
+                 filePath: String,
+                 branchName: String,
+                 commitMessage: String): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/repository/files").withHeaders(authToken)
-      .withQueryString("file_path" -> filePath, "branch_name" -> branchName)
+      .withQueryString("file_path" -> filePath, "branch_name" -> branchName, "commit_message" -> commitMessage).delete()
   }
 
   /**
@@ -422,11 +424,12 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
    * Merge requests
    */
 
-  def getMergeRequests(projectId: Int, state: Option[String] = Option("all"),
+  def getMergeRequests(projectId: Int,
+                       state: Option[String] = Option("all"),
                        order_by: Option[String] = Option("created_at"),
                        sort: Option[String] = Option("asc")): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/merge_requests").withHeaders(authToken)
-      .withQueryString("state" -> state.get, "order_by" -> order_by.get, "sort" -> sort.get).get()
+      .withQueryString("state" -> state.orNull, "order_by" -> order_by.orNull, "sort" -> sort.orNull).get()
   }
 
   def getMergeRequest(projectId: Int, mergeReqId: Int): Future[WSResponse] = {
@@ -437,26 +440,26 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
                       sourceBranch: String,
                       targetBranch: String,
                       title: String,
-                      assigneeId: Option[Int],
-                      targetProjectId: Option[Int]): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectId + "/merge_request").withHeaders(authToken)
+                      assigneeId: Option[Int] = None,
+                      targetProjectId: Option[Int] = None): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/merge_requests").withHeaders(authToken)
       .post(Extraction.decompose(MergeRequest(sourceBranch, targetBranch, title, assigneeId, targetProjectId)).underscoreKeys)
   }
 
   def updateMergeRequest(projectId: Int,
                          mergeRequestId: Int,
-                         sourceBranch: String,
-                         targetBranch: String,
-                         title: String,
-                         assigneeId: Option[Int],
-                         targetProjectId: Option[Int]): Future[WSResponse] = {
+                         sourceBranch: Option[String] = None,
+                         targetBranch: Option[String] = None,
+                         assigneeId: Option[Int] = None,
+                         title: Option[String] = None,
+                         stateEvent: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/merge_request/" + mergeRequestId).withHeaders(authToken)
-      .put(Extraction.decompose(MergeRequest(sourceBranch, targetBranch, title, assigneeId, targetProjectId)).underscoreKeys)
+      .put(Extraction.decompose(MergeRequest(sourceBranch.orNull, targetBranch.orNull, title.orNull, assigneeId)).underscoreKeys)
   }
 
   def acceptMergeRequest(projectId: Int,
                          mergeRequestId: Int,
-                         mergeCommitMessage: Option[String]): Future[WSResponse] = {
+                         mergeCommitMessage: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/merge_request/" + mergeRequestId + "/merge").withHeaders(authToken)
       .put(Json.obj("merge_commit_message" -> mergeCommitMessage))
   }
@@ -475,16 +478,16 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
    * Issues
    */
 
-  def getAllIssues(state: Option[String], labels: Option[String]): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/issues").withHeaders(authToken).withQueryString("state" -> state.get, "labels" -> labels.get).get()
+  def getAllIssues(state: Option[String] = None, labels: Option[String] = None): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/issues").withHeaders(authToken).withQueryString("state" -> state.orNull, "labels" -> labels.orNull).get()
   }
 
   def getIssues(projectId: Int,
-                state: Option[String],
-                labels: Option[String],
-                milestone: Option[String]): Future[WSResponse] = {
+                state: Option[String] = None,
+                labels: Option[String] = None,
+                milestone: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/issues").withHeaders(authToken)
-      .withQueryString("state" -> state.get, "labels" -> labels.get, "milestone" -> milestone.get).get()
+      .withQueryString("state" -> state.orNull, "labels" -> labels.orNull, "milestone" -> milestone.orNull).get()
   }
 
   def getIssue(projectId: Int, issueId: Int): Future[WSResponse] = {
@@ -493,26 +496,30 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
 
   def addIssue(projectId: Int,
                title: String,
-               description: Option[String],
-               assigneeId: Option[String],
-               milestoneId: Option[String],
-               labels: Option[String]): Future[WSResponse] = {
+               description: Option[String] = None,
+               assigneeId: Option[String] = None,
+               milestoneId: Option[String] = None,
+               labels: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/issues").withHeaders(authToken)
-      .post(Extraction.decompose(Issue(title, description, assigneeId, milestoneId, labels, None)).underscoreKeys)
+      .post(Extraction.decompose(Issue(Option(title), description, assigneeId, milestoneId, labels, None)).underscoreKeys)
   }
 
 
   // To delete an issue, set the stateEvent to 'closed'
   def updateIssue(projectId: Int,
                   issueId: Int,
-                  title: String,
-                  description: Option[String],
-                  assigneeId: Option[String],
-                  milestoneId: Option[String],
-                  labels: Option[String],
-                  stateEvent: Option[String]): Future[WSResponse] = {
+                  title: Option[String] = None,
+                  description: Option[String] = None,
+                  assigneeId: Option[String] = None,
+                  milestoneId: Option[String] = None,
+                  labels: Option[String] = None,
+                  state: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/issues/" + issueId).withHeaders(authToken)
-      .put(Extraction.decompose(Issue(title, description, assigneeId, milestoneId, labels, stateEvent)).underscoreKeys)
+      .put(Extraction.decompose(Issue(title, description, assigneeId, milestoneId, labels, state)).underscoreKeys)
+  }
+
+  def closeIssue(projectId: Int, issueId: Int): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/issues/" + issueId).withHeaders(authToken).put(Json.obj("state_event" -> "close"))
   }
 
   /**
@@ -523,25 +530,24 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
     WS.url(gitlabUrl + "/projects/" + projectId + "/labels").withHeaders(authToken).get()
   }
 
-  def addLabel(projectId: Int, name: String, color: String): Future[WSResponse] = {
+  def addLabel(projectId: Int,
+               name: String,
+               color: String): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/labels").withHeaders(authToken)
       .post(Extraction.decompose(Label(name, color)).underscoreKeys)
   }
 
-  /**
-   * WTF documentation?
-   */
+  def updateLabel(projectId: Int,
+                  name: String,
+                  newName: Option[String] = None,
+                  color: Option[String] = None): Future[WSResponse] = {
+    val updatedLabel = ("name" -> name) ~ ("new_name" -> newName.orNull) ~ ("color" -> color.orNull)
+    WS.url(gitlabUrl + "/projects/" + projectId + "/labels").withHeaders(authToken).put(updatedLabel)
+  }
+
   def deleteLabel(projectId: Int, name: String): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/labels").withHeaders(authToken)
       .withQueryString("name" -> name).delete()
-  }
-
-  /**
-   * WTF documentation?
-   */
-  def updateLabel(projectId: Int, name: String, newName: String, color: String): Future[WSResponse] = {
-    val updatedLabel = ("name" -> name) ~ ("new_name" -> newName) ~ ("color" -> color)
-    WS.url(gitlabUrl + "/projects/" + projectId + "/labels/" + name).withHeaders(authToken).put(updatedLabel)
   }
 
 
@@ -556,22 +562,27 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
     WS.url(gitlabUrl + "/projects/" + projectId + "/milestones/" + milestoneId).withHeaders(authToken).get()
   }
 
-  def addMilestone(projectId: Int, title: String, description: Option[String], dueDate: Option[String]): Future[WSResponse] = {
+  def addMilestone(projectId: Int,
+                   title: String,
+                   description: Option[String] = None,
+                   dueDate: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/milestones").withHeaders(authToken)
       .post(Extraction.decompose(Milestone(title, description, dueDate, None)).underscoreKeys)
   }
 
-  /**
-   * State event = close/activate
-   */
   def updateMilestone(projectId: Int,
                       milestoneId: Int,
                       title: String,
-                      description: Option[String],
-                      dueDate: Option[String],
-                      stateEvent: Option[String]): Future[WSResponse] = {
+                      description: Option[String] = None,
+                      dueDate: Option[String] = None,
+                      stateEvent: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/milestones/" + milestoneId).withHeaders(authToken)
       .put(Extraction.decompose(Milestone(title, description, dueDate, stateEvent)).underscoreKeys)
+  }
+
+  def closeMilestone(projectId: Int, milestoneId: Int): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/milestones/" + milestoneId).withHeaders(authToken)
+      .put(Json.obj("state_event" -> "close"))
   }
 
   /**
@@ -591,6 +602,11 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
       .post(Json.obj("body" -> body))
   }
 
+  def updateIssueNote(projectId: Int, issueId: Int, noteId: Int, body: String): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/issues/" + issueId + "/notes/" + noteId).withHeaders(authToken)
+      .put(Json.obj("body" -> body))
+  }
+
   /**
    * Snippet Notes
    */
@@ -608,6 +624,12 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
       .post(Json.obj("body" -> body))
   }
 
+  def updateSnippetNote(projectId: Int, snippetId: Int, noteId: Int, body: String): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/snippets/" + snippetId + "/notes/" + noteId).withHeaders(authToken)
+      .put(Json.obj("body" -> body))
+  }
+
+
   /**
    * Merge Request Notes
    */
@@ -623,6 +645,11 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
   def addMergeRequestNote(projectId: Int, mergeRequestId: Int, body: String): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/merge_requests/" + mergeRequestId + "/notes").withHeaders(authToken)
       .post(Json.obj("body" -> body))
+  }
+
+  def updateMergeRequestNote(projectId: Int, mergeRequestId: Int, noteId: Int, body: String): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/merge_requests/" + mergeRequestId + "/notes/" + noteId).withHeaders(authToken)
+      .put(Json.obj("body" -> body))
   }
 
   /**
@@ -684,12 +711,12 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
     WS.url(gitlabUrl + "/groups/" + groupId + "/members").withHeaders(authToken).get()
   }
 
-  def addGroupMembers(groupId: Int, userId: Int, accessLevel: Int): Future[WSResponse] = {
+  def addGroupMember(groupId: Int, userId: Int, accessLevel: Int): Future[WSResponse] = {
     WS.url(gitlabUrl + "/groups/" + groupId + "/members").withHeaders(authToken)
       .post(("user_id" -> userId) ~ ("access_level" -> accessLevel))
   }
 
-  def deleteGroupMember(groupId: Int, userId: Int): Future[WSResponse] = {
+  def removeGroupMember(groupId: Int, userId: Int): Future[WSResponse] = {
     WS.url(gitlabUrl + "/groups/" + groupId + "/members/" + userId).withHeaders(authToken).delete()
   }
 }

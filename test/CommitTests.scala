@@ -4,9 +4,9 @@ import play.api.Logger
 import play.api.test.FakeApplication
 import play.api.test.Helpers._
 
-class CommitsTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class CommitTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  lazy val logger = Logger(classOf[CommitsTests])
+  lazy val logger = Logger(classOf[CommitTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val projectName = GitlabHelper.projectName
@@ -25,7 +25,8 @@ class CommitsTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
     running(FakeApplication()) {
       GitlabHelper.deleteTestProject()
       GitlabHelper.deleteTestSSHKey()
-      logger.debug("End of GitlabAPI Branch Tests")
+      logger.debug("End of Branch Tests")
+      Thread.sleep(1000L)
     }
   }
 

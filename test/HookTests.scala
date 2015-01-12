@@ -4,21 +4,21 @@ import play.api.Logger
 import play.api.test.FakeApplication
 import play.api.test.Helpers._
 
-class HooksTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class HookTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  lazy val logger = Logger(classOf[HooksTests])
+  lazy val logger = Logger(classOf[HookTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
 
   val projectName = GitlabHelper.projectName
-  var projectId = 0
-  var systemHookId = 0
-  var projectHookId = 0
+  var projectId = -1
+  var systemHookId = -1
+  var projectHookId = -1
 
   override def beforeAll(): Unit = {
     running(FakeApplication()) {
       projectId = GitlabHelper.createEmptyTestProject
-      logger.debug("Starting Team Tests")
+      logger.debug("Starting Hook Tests")
     }
   }
 
@@ -29,12 +29,12 @@ class HooksTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
         GitlabHelper.statusCheckError(systemHookResponse, "System Hook", systemHookId)
         val projectHookResponse = await(gitlabAPI.deleteHook(projectId, projectHookId))
         GitlabHelper.statusCheckError(projectHookResponse, "Project Hook", projectHookId)
-        super.afterAll()
       } catch {
         case e: UnsupportedOperationException => logger.error(e.toString)
       }
       GitlabHelper.deleteTestProject()
-      logger.debug("End of GitlabAPI Hooks tests")
+      logger.debug("End of Hook tests")
+      Thread.sleep(1000L)
     }
   }
 

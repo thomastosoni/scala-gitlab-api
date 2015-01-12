@@ -7,7 +7,7 @@ case class File(filePath: String,
                 branchName: String,
                 content: String,
                 commitMessage: String,
-                encoding: Option[String] = Option("base64"))
+                encoding: Option[String] = None)
 
 object File {
   implicit val fileReader: Reads[File] = (

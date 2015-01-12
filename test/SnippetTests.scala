@@ -16,14 +16,15 @@ class SnippetTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   override def beforeAll(): Unit = {
     running(FakeApplication()) {
       projectId = GitlabHelper.createEmptyTestProject
-      logger.debug("Starting Repository Tests")
+      logger.debug("Starting Snippet Tests")
     }
   }
 
   override def afterAll() {
     running(FakeApplication()) {
       GitlabHelper.deleteTestProject()
-      logger.debug("End of GitlabAPI Repository Tests")
+      logger.debug("End of Snippet Tests")
+      Thread.sleep(1000L)
     }
   }
 

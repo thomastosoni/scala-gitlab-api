@@ -4,9 +4,9 @@ import play.api.Logger
 import play.api.test.FakeApplication
 import play.api.test.Helpers._
 
-class UsersTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class UserTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  lazy val logger = Logger(classOf[UsersTests])
+  lazy val logger = Logger(classOf[UserTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val userName = GitlabHelper.userName
@@ -24,7 +24,8 @@ class UsersTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
       } catch {
         case e: UnsupportedOperationException => logger.error(e.toString)
       }
-      logger.debug("End of GitlabAPI Users tests")
+      logger.debug("End of User Tests")
+      Thread.sleep(1000L)
     }
   }
 

@@ -4,9 +4,9 @@ import play.api.Logger
 import play.api.test.FakeApplication
 import play.api.test.Helpers._
 
-class SSHKeysTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll  {
+class SSHKeyTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll  {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  lazy val logger = Logger(classOf[SSHKeysTests])
+  lazy val logger = Logger(classOf[SSHKeyTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val sshKeyTitle = "ssh_key_title"
@@ -20,7 +20,8 @@ class SSHKeysTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll  
       } catch {
         case e: UnsupportedOperationException => logger.error(e.toString)
       }
-      logger.debug("End of GitlabAPI SSHKeys tests")
+      logger.debug("End of SSHKeys tests")
+      Thread.sleep(1000L)
     }
   }
 

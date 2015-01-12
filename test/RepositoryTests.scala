@@ -10,22 +10,28 @@ class RepositoryTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAl
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val projectName = GitlabHelper.projectName
+  val tagName = "tag"
   var projectId = -1
   var commitSHA = ""
 
   override def beforeAll(): Unit = {
     running(FakeApplication()) {
+      GitlabHelper.createTestSSHKey
       projectId = GitlabHelper.createTestProject
-      commitSHA = (await(gitlabAPI.getBranch(projectId, "master")).json \ "commit" \ "id").as[String]
-      logger.debug("Starting Branches tests")
+      val branchResponse = await(gitlabAPI.getBranch(projectId, "master"))
+      if (branchResponse.status == 200) {
+        commitSHA = (branchResponse.json \ "commit" \ "id").as[String]
+      } else logger.error("Before All: Didn't create test branch")
+      logger.debug("Starting Repository Tests")
     }
   }
 
   override def afterAll() {
     running(FakeApplication()) {
+      GitlabHelper.deleteTestSSHKey()
       GitlabHelper.deleteTestProject()
-      //        super.afterAll()
-      logger.debug("End of GitlabAPI Branches tests")
+      logger.debug("End of Repository Tests")
+      Thread.sleep(1000L)
     }
   }
 
@@ -37,7 +43,7 @@ class RepositoryTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAl
     }
 
     "create a new tag for a project" in {
-      val response = await(gitlabAPI.createTag(projectId, "tag_name", commitSHA))
+      val response = await(gitlabAPI.createTag(projectId, tagName, commitSHA))
       response.status must be(201)
     }
 
@@ -49,17 +55,17 @@ class RepositoryTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAl
       await(gitlabAPI.getRawFileContent(projectId, commitSHA, "README.md")).status must be(200)
     }
 
-//    "get raw file content for a blob by blob SHA" in {
-//      await(gitlabAPI.getRawBlobContent(projectId, blobSHA)).status must be(200)
-//    }
+    //    "get raw file content for a blob by blob SHA" in {
+    //      await(gitlabAPI.getRawBlobContent(projectId, blobSHA)).status must be(200)
+    //    }
 
     "get an archive from the repository" in {
       await(gitlabAPI.getArchive(projectId)).status must be(200)
     }
 
-//    "compare branches" in {
-//      await(gitlabAPI.compare(projectId, commitSHA, firstCommitSHA))
-//    }
+    //    "compare branches" in {
+    //      await(gitlabAPI.compare(projectId, commitSHA, firstCommitSHA))
+    //    }
 
     "get the contributors" in {
       await(gitlabAPI.getContributors(projectId)).status must be(200)

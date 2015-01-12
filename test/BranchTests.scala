@@ -4,9 +4,9 @@ import play.api.Logger
 import play.api.test.FakeApplication
 import play.api.test.Helpers._
 
-class BranchesTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class BranchTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  lazy val logger = Logger(classOf[BranchesTests])
+  lazy val logger = Logger(classOf[BranchTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val projectName = GitlabHelper.projectName
@@ -24,15 +24,15 @@ class BranchesTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll 
   override def afterAll() {
     running(FakeApplication()) {
       try {
-        val response = await(gitlabAPI.deleteBranch(projectId, "test_branch_name"))
+        val response = await(gitlabAPI.deleteBranch(projectId, "branch_name"))
         GitlabHelper.statusCheckError(response, "Branch", -1)
-        super.afterAll()
       } catch {
         case e: UnsupportedOperationException => logger.error(e.toString)
       }
       GitlabHelper.deleteTestSSHKey()
       GitlabHelper.deleteTestProject()
-      logger.debug("End of GitlabAPI Branch Tests")
+      logger.debug("End of Branch Tests")
+      Thread.sleep(1000L)
     }
   }
 

@@ -5,25 +5,24 @@ import play.api.Logger
 import play.api.test.FakeApplication
 import play.api.test.Helpers._
 
-class ProjectsTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class ProjectTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  lazy val logger = Logger(classOf[ProjectsTests])
+  lazy val logger = Logger(classOf[ProjectTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val projectName = GitlabHelper.projectName
-  var projectId = 0
+  var projectId = -1
 
   override def afterAll() {
     running(FakeApplication()) {
       try {
-        if (projectId != 0) {
-          val response = await(gitlabAPI.deleteProject(projectId))
-          GitlabHelper.statusCheck(response, "Project", projectId)
-        }
+        val response = await(gitlabAPI.deleteProject(projectId))
+        GitlabHelper.statusCheckError(response, "Project", projectId)
       } catch {
         case e: UnsupportedOperationException => logger.error("Couldn't delete project with id: " + projectId)
       }
-      logger.debug("End of GitlabAPI Projects tests")
+      logger.debug("End of Project tests")
+      Thread.sleep(1000L)
     }
   }
 
