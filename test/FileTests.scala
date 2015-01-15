@@ -31,7 +31,7 @@ class FileTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
       try {
         val response = await(gitlabAPI.deleteFile(projectId, fileName, targetBranch, fileCommitMessage))
         // Returns 400 ("You can only edit text files") if it tries to delete a non-existent file?
-        GitlabHelper.statusCheck(response, "File", -1)
+        GitlabHelper.checkDeleteAfterTest(response, FILE)
       } catch {
         case e: UnsupportedOperationException => logger.error(e.toString)
       }

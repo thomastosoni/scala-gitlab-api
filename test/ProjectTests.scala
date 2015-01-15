@@ -15,12 +15,8 @@ class ProjectTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
 
   override def afterAll() {
     running(FakeApplication()) {
-      try {
-        val response = await(gitlabAPI.deleteProject(projectId))
-        GitlabHelper.statusCheckError(response, "Project", projectId)
-      } catch {
-        case e: UnsupportedOperationException => logger.error("Couldn't delete project with id: " + projectId)
-      }
+      val response = await(gitlabAPI.deleteProject(projectId))
+      GitlabHelper.checkDeleteAfterTest(response, PROJECT)
       logger.debug("End of Project tests")
       Thread.sleep(1000L)
     }
@@ -58,6 +54,10 @@ class ProjectTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
       (response.json \\ "name").map(_.as[String]).head must be(projectName)
     }
 
+//    "fork project" in {
+//      await(gitlabAPI.forkProject(projectId)).status must be (200)
+//    }
+
     "delete a project" in {
       val response = await(gitlabAPI.deleteProject(projectId))
       response.status must be(200)
@@ -65,5 +65,3 @@ class ProjectTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
     }
   }
 }
-
-// TODO fork

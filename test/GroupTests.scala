@@ -19,22 +19,18 @@ class GroupTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = {
     running(FakeApplication()) {
-      projectId = GitlabHelper.createEmptyTestProject
       userId = GitlabHelper.createTestUser
+      projectId = GitlabHelper.createEmptyTestProject
       logger.debug("Starting Group Tests")
     }
   }
 
   override def afterAll() {
     running(FakeApplication()) {
-      try {
-        val response = await(gitlabAPI.deleteGroup(groupId))
-        GitlabHelper.statusCheckError(response, "Group", groupId)
-      } catch {
-        case e: IllegalStateException => logger.error(e.toString)
-      }
-      GitlabHelper.deleteTestProject()
       GitlabHelper.deleteTestUser()
+      GitlabHelper.deleteTestProject()
+      val response = await(gitlabAPI.deleteGroup(groupId))
+      GitlabHelper.checkDeleteAfterTest(response, GROUP)
       logger.debug("End of Group Tests")
       Thread.sleep(1000L)
     }

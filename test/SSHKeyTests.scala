@@ -14,12 +14,8 @@ class SSHKeyTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll  {
 
   override def afterAll() {
     running(FakeApplication()) {
-      try {
-        val SShKeyResponse = await(gitlabAPI.deleteSSHKey(sshKeyId))
-        GitlabHelper.statusCheckError(SShKeyResponse, "SSH Key", sshKeyId)
-      } catch {
-        case e: UnsupportedOperationException => logger.error(e.toString)
-      }
+      val SShKeyResponse = await(gitlabAPI.deleteSSHKey(sshKeyId))
+      GitlabHelper.checkDeleteAfterTest(SShKeyResponse, SSH_KEY)
       logger.debug("End of SSHKeys tests")
       Thread.sleep(1000L)
     }

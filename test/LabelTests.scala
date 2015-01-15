@@ -24,13 +24,9 @@ class LabelTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
 
   override def afterAll() {
     running(FakeApplication()) {
-      try {
-        val response = await(gitlabAPI.deleteLabel(projectId, labelTitle))
-        GitlabHelper.statusCheckError(response, "Label", -1)
-      } catch {
-        case e: UnsupportedOperationException => logger.error(e.toString)
-      }
       GitlabHelper.deleteTestProject()
+      val response = await(gitlabAPI.deleteLabel(projectId, labelTitle))
+      GitlabHelper.checkDeleteAfterTest(response, LABEL)
       logger.debug("End of Label Tests")
       Thread.sleep(1000L)
     }

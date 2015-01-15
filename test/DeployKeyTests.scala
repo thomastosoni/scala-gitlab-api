@@ -25,12 +25,8 @@ class DeployKeyTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll
 
   override def afterAll() {
     running(FakeApplication()) {
-      try {
-        val response = await(gitlabAPI.deleteDeployKey(projectId, deployKeyId))
-        GitlabHelper.statusCheckError(response, "Deploy Key", deployKeyId)
-      } catch {
-        case e: UnsupportedOperationException => logger.error(e.toString)
-      }
+      val response = await(gitlabAPI.deleteDeployKey(projectId, deployKeyId))
+      GitlabHelper.checkDeleteAfterTest(response, DEPLOY_KEY)
       GitlabHelper.deleteTestProject()
       Thread.sleep(1000L)
       logger.debug("End of Deploy Key Tests")

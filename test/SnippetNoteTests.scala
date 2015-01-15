@@ -4,9 +4,9 @@ import play.api.Logger
 import play.api.test.FakeApplication
 import play.api.test.Helpers._
 
-class SnippetNotesTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class SnippetNoteTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  lazy val logger = Logger(classOf[SnippetNotesTests])
+  lazy val logger = Logger(classOf[SnippetNoteTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val projectName = GitlabHelper.projectName
@@ -28,16 +28,14 @@ class SnippetNotesTests extends PlaySpec with OneAppPerSuite with BeforeAndAfter
 
   override def afterAll() {
     running(FakeApplication()) {
-      running(FakeApplication()) {
-        GitlabHelper.deleteTestProject()
-        logger.debug("End of Snippet Note Tests")
-        Thread.sleep(1000L)
-      }
+      GitlabHelper.deleteTestProject()
+      logger.debug("End of Snippet Note Tests")
+      Thread.sleep(1000L)
     }
   }
 
   "GitlabAPI must manage snippet notes" should {
-    
+
     "add an snippet note" in {
       val response = await(gitlabAPI.addSnippetNote(projectId, snippetId, "Test snippet Body"))
       response.status must be(201)
@@ -52,11 +50,12 @@ class SnippetNotesTests extends PlaySpec with OneAppPerSuite with BeforeAndAfter
       await(gitlabAPI.getSnippetNote(projectId, snippetId, noteId)).status must be (200)
     }
 
-//    "update an snippet note" in {
-//      val response = await(gitlabAPI.updateSnippetNote(projectId, snippetId, noteId, "Updated Snippet Note Body"))
-//      response.status must be(200)
-//      (response.json \ "body").as[String] must be("Updated Snippet Note Body")
-//    }
+    //    TODO 405 unauthorized?
+    //    "update an snippet note" in {
+    //      val response = await(gitlabAPI.updateSnippetNote(projectId, snippetId, noteId, "Updated Snippet Note Body"))
+    //      response.status must be(200)
+    //      (response.json \ "body").as[String] must be("Updated Snippet Note Body")
+    //    }
 
   }
 }

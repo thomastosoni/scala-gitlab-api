@@ -1,4 +1,4 @@
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfter}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play._
 import play.api.Logger
 import play.api.test.FakeApplication
@@ -17,13 +17,8 @@ class UserTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
 
   override def afterAll() {
     running(FakeApplication()) {
-      try {
-        val response = await(gitlabAPI.deleteUser(userId))
-        GitlabHelper.statusCheckError(response, "User", userId)
-        super.afterAll()
-      } catch {
-        case e: UnsupportedOperationException => logger.error(e.toString)
-      }
+      val response = await(gitlabAPI.deleteUser(userId))
+      GitlabHelper.checkDeleteAfterTest(response, USER)
       logger.debug("End of User Tests")
       Thread.sleep(1000L)
     }

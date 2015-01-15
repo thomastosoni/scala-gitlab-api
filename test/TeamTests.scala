@@ -9,6 +9,8 @@ class TeamTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   lazy val logger = Logger(classOf[TeamTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
+  val testProjectName = GitlabHelper.projectName
+  val testUserName = GitlabHelper.userName
 
   var userId = -1
   var projectId = -1
@@ -25,28 +27,36 @@ class TeamTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
     running(FakeApplication()) {
       GitlabHelper.deleteTestUser()
       GitlabHelper.deleteTestProject()
-      try {
-        val teamMemberResponse = await(gitlabAPI.deleteTeamMember(projectId, userId))
-        GitlabHelper.statusCheck(teamMemberResponse, "Team Member", userId)
-      } catch {
-        case e: UnsupportedOperationException => logger.error(e.toString)
-      }
+      val teamMemberResponse = await(gitlabAPI.deleteTeamMember(projectId, userId))
+      GitlabHelper.checkDeleteAfterTest(teamMemberResponse, TEAM_MEMBER)
       logger.debug("End of Team Tests")
       Thread.sleep(1000L)
     }
   }
 
   "GitlabAPI must manage teams" should {
-    "get team members" in {
-      await(gitlabAPI.getTeamMembers(projectId)).status must be(200)
-    }
-
     "add a team member" in {
       await(gitlabAPI.addTeamMember(projectId, userId, 40)).status must be(201)
     }
 
-    "get a team member" in {
+    "get team members by project id" in {
+      await(gitlabAPI.getTeamMembers(projectId)).status must be(200)
+    }
+
+//    "get team members by project name" in {
+//      await(gitlabAPI.getTeamMembers(testProjectName)).status must be(200)
+//    }
+
+    "get a team member by project id" in {
       await(gitlabAPI.getTeamMember(projectId, userId)).status must be(200)
+    }
+
+//    "get a team member by project name" in {
+//      await(gitlabAPI.getTeamMember(testProjectName, userId)).status must be(200)
+//    }
+
+    "update team member access level" in {
+      await(gitlabAPI.updateTeamMemberAccessLevel(projectId, userId, 40)).status must be(200)
     }
 
     // Revoking team membership for a user who is not currently a team member is considered success.

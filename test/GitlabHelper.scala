@@ -1,19 +1,20 @@
 import com.typesafe.config.ConfigFactory
 import play.api.Logger
-import play.api.libs.json.JsValue
-import play.api.libs.ws.{DefaultWSResponseHeaders, WSResponse}
+import play.api.libs.ws.WSResponse
 import play.api.test.Helpers._
 
 object GitlabHelper {
   lazy val conf = ConfigFactory.load()
-  lazy val depot = conf.getString("gitlab.testing-depot")
+  lazy val sshKey = conf.getString("gitlab.test-ssh-key")
+  lazy val depot = conf.getString("gitlab.test-repository")
   lazy val gitlabUrl = conf.getString("gitlab.url")
   lazy val gitlabToken = conf.getString("gitlab.token")
-  lazy val sshKey = conf.getString("gitlab.ssh-key")
   lazy val logger = Logger("GitlabHelper")
 
+  lazy val gitlabAPI = new GitlabAPI(gitlabUrl, gitlabToken)
+
   // Waiting time for project setup branches and commits in seconds
-  val branchesImportMaxWaitingTime = 60
+  val branchesImportMaxWaitingTime = 40
   val commitsImportMaxWaitingTime = 10
 
   // PROJECT
@@ -33,26 +34,26 @@ object GitlabHelper {
   // SSH KEY
   var sshKeyId = -1
 
-  def statusCheckError(response: WSResponse, objectName: String, id: Int): Unit = {
+  private def statusCheck(response: WSResponse, resource: Resource): Unit = {
     response.status match {
-      case 200 =>
-        if (response.json.toString() != "null") {
-          logger.error(objectName + " (id: " + id + ") successfully removed, but it should have been removed by tests. Response: " + response.json)
-        }
-      case 404 => logger.debug(objectName + " (id: " + id + ") not found, must have been removed by tests")
-      case _ => throw new UnsupportedOperationException("Invalid status: " + response.status + ", json response: " + response.json)
+      case 200 => logger.debug("200 OK: " + resource + ". Response: " + response.json)
+      case 201 => logger.debug("201 Created: " + resource + ". Response: " + response.json)
+      case 400 => logger.debug("400 Bad Request: " + resource + ". Response: " + response.json)
+      case 401 => logger.debug("400 Unauthorized: " + resource + ". Response: " + response.json)
+      case 403 => logger.debug("403 Forbidden: " + resource + ". Response: " + response.json)
+      case 404 => logger.debug("404 Not Found: " + resource + ". Must have been removed by tests. Response: " + response.json)
+      case 405 => logger.debug("405 Not Allowed: " + resource + ". Response: " + response.json)
+      case 409 => logger.debug("405 Conflict: " + resource + ". Response: " + response.json)
+      case 422 => logger.debug("422 Unprocessable: " + resource + ". Response: " + response.json)
+      case 500 => logger.debug("500 Unprocessable: " + resource + ". Response: " + response.json)
     }
   }
 
-  def statusCheck(response: WSResponse, objectName: String, id: Int): Unit = {
-    response.status match {
-      case 200 =>
-        if (response.json.toString() != "null") {
-          logger.debug(objectName + " (id: " + id + ") successfully removed. Response: " + response.json)
-        }
-      case 404 => logger.debug("404 Note Found: " + objectName + " (id: " + id + ") must have been removed by tests")
-      case 400 => logger.debug("400 Bad Request: " + response.json)
-      case _ => throw new UnsupportedOperationException("Invalid status: " + response.status + ", json response: " + response.json)
+  def checkDeleteAfterTest(response: WSResponse, resource: Resource): Unit = {
+    if (response.status == 200 && response.json.toString() != "null") {
+      logger.error(resource + " has been deleted, but it should have been done during the tests.")
+    } else {
+      statusCheck(response, resource)
     }
   }
 
@@ -62,7 +63,7 @@ object GitlabHelper {
 
   def createTestUser: Int = {
     try {
-      val response = await(gitlabAPI.createUser(email, password, userUsername, userName, None))
+      val response = await(gitlabAPI.createUser(email, password, userUsername, userName))
       userId = (response.json \ "id").as[Int]
       logger.debug("Created Test User: " + response.json.toString())
       userId
@@ -74,7 +75,7 @@ object GitlabHelper {
   def deleteTestUser(): Unit = {
     try {
       val response = await(gitlabAPI.deleteUser(userId))
-      statusCheck(response, "User", userId)
+      statusCheck(response, USER)
     } catch {
       case e: Throwable => logger.error("Couldn't delete Test User " + e);
     }
@@ -116,49 +117,45 @@ object GitlabHelper {
       throw new NoSuchElementException("Missing commits for project loaded from: " + depot + "Maybe it needs more loading time.")
   }
 
+  // TODO Refactor createTestProject and createEmptyTestProject. Check if test project exist. Generate name. Handle kill.
   def createTestProject: Int = {
     try {
       val response = await(gitlabAPI.createProject(GitlabHelper.projectName, importUrl = Option(depot)))
-      projectId = (response.json \ "id").as[Int]
-      waitForProjectSetup(projectId)
-      logger.debug("Created Test Project: " + response.json.toString())
+      if (response.status == 201) {
+        projectId = (response.json \ "id").as[Int]
+        waitForProjectSetup(projectId)
+        logger.debug("Created Test Project: " + response.json.toString())
+      } else throw new Throwable("Couldn't setup Test Project for testing")
       return projectId
     } catch {
       case e: NoSuchElementException => logger.error(e.toString)
-        deleteTestProject()
-        deleteTestSSHKey()
       case e: RuntimeException => logger.error(e.toString)
-        deleteTestProject()
-        deleteTestSSHKey()
-      case e: Throwable => logger.error("Couldn't setup Test Project for testing: " + e.toString)
-        deleteTestProject()
-        deleteTestSSHKey()
+      case e: Throwable => logger.error(e.toString)
     }
+    deleteTestProject()
+    deleteTestSSHKey()
     -1
   }
 
   def createEmptyTestProject: Int = {
     try {
       val response = await(gitlabAPI.createProject(GitlabHelper.projectName))
-      logger.debug("Created Empty Test Project: " + response.json.toString())
-      projectId = (response.json \ "id").as[Int]
+      if (response.status == 201) {
+        logger.debug("Created Empty Test Project: " + response.json.toString())
+        projectId = (response.json \ "id").as[Int]
+      } else throw new Throwable("Couldn't setup Test Project for testing")
       return projectId
     } catch {
-      case e: Throwable =>
-        logger.error("Couldn't setup Empty Test Project for testing: " + e.toString)
-        deleteTestProject()
-        deleteTestSSHKey()
+      case e: Throwable => logger.error(e.toString)
     }
+    deleteTestProject()
+    deleteTestSSHKey()
     -1
   }
 
   def deleteTestProject(): Unit = {
-    try {
-      val response = await(gitlabAPI.deleteProject(projectId))
-      statusCheck(response, "Project", projectId)
-    } catch {
-      case e: Throwable => logger.error("Couldn't delete Test Project " + e);
-    }
+    val response = await(gitlabAPI.deleteProject(projectId))
+    statusCheck(response, PROJECT)
   }
 
   /**
@@ -168,22 +165,21 @@ object GitlabHelper {
   def createTestSSHKey: Int = {
     try {
       val response = await(gitlabAPI.addSSHKey("test_ssh_key", sshKey))
-      logger.debug("Created Test SSHKey: " + response.json.toString())
-      sshKeyId = (response.json \ "id").as[Int]
-      sshKeyId
+      if (response.status == 201) {
+        logger.debug("Created Test SSHKey: " + response.json.toString())
+        sshKeyId = (response.json \ "id").as[Int]
+        return sshKeyId
+      } else throw new Throwable("Couldn't create SSH Key for testing")
     } catch {
-      case e: Throwable => logger.error("Couldn't create Test SSH Key " + e); -1
+      case e: Throwable => logger.error(e.toString);
     }
+    deleteTestProject()
+    deleteTestSSHKey()
+    -1
   }
 
   def deleteTestSSHKey(): Unit = {
-    try {
-      val response = await(gitlabAPI.deleteSSHKey(sshKeyId))
-      statusCheck(response, "SSH Key", sshKeyId)
-    } catch {
-      case e: Throwable => logger.error("Couldn't delete Test SSH Key " + e);
-    }
+    val response = await(gitlabAPI.deleteSSHKey(sshKeyId))
+    statusCheck(response, SSH_KEY)
   }
-
-  lazy val gitlabAPI = new GitlabAPI(gitlabUrl, gitlabToken)
 }

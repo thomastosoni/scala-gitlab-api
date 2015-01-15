@@ -50,7 +50,7 @@ class IssueNoteTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll
       await(gitlabAPI.getIssueNote(projectId, issueId, noteId)).status must be (200)
     }
 
-    //    TODO Un-existing method put, update Gitlab?
+    //   TODO 405 unauthorized?
     //    "update an issue note" in {
     //      val response = await(gitlabAPI.updateIssueNote(projectId, issueId, noteId, "Updated Issue Note Body"))
     //      response.status must be(200)

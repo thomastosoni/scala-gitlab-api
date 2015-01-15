@@ -24,15 +24,6 @@ class IssueTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
 
   override def afterAll() {
     running(FakeApplication()) {
-      try {
-        val response = await(gitlabAPI.getIssue(projectId, issueId))
-        if (response.status == 200) {
-          val issueState = (response.json \ "state").as[String]
-          if (issueState != "closed") throw new IllegalStateException("Issue state should be set to \"closed\", actual: " + issueState)
-        } else logger.error("After All: Didn't get issue")
-      } catch {
-        case e: IllegalStateException => logger.error(e.toString)
-      }
       GitlabHelper.deleteTestProject()
       logger.debug("End of Issue Tests")
       Thread.sleep(1000L)
@@ -69,7 +60,5 @@ class IssueTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
       val response = await(gitlabAPI.closeIssue(projectId, issueId))
       response.status must be(200)
     }
-
   }
-
 }

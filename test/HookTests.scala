@@ -24,15 +24,11 @@ class HookTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
 
   override def afterAll() {
     running(FakeApplication()) {
-      try {
-        val systemHookResponse = await(gitlabAPI.deleteHook(systemHookId))
-        GitlabHelper.statusCheckError(systemHookResponse, "System Hook", systemHookId)
-        val projectHookResponse = await(gitlabAPI.deleteHook(projectId, projectHookId))
-        GitlabHelper.statusCheckError(projectHookResponse, "Project Hook", projectHookId)
-      } catch {
-        case e: UnsupportedOperationException => logger.error(e.toString)
-      }
       GitlabHelper.deleteTestProject()
+      val systemHookResponse = await(gitlabAPI.deleteHook(systemHookId))
+      GitlabHelper.checkDeleteAfterTest(systemHookResponse, SYSTEM_HOOK)
+      val projectHookResponse = await(gitlabAPI.deleteHook(projectId, projectHookId))
+      GitlabHelper.checkDeleteAfterTest(projectHookResponse, PROJECT_HOOK)
       logger.debug("End of Hook tests")
       Thread.sleep(1000L)
     }

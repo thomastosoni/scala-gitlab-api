@@ -67,7 +67,7 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
                  password: String,
                  username: String,
                  name: String,
-                 admin: Option[Boolean]): Future[WSResponse] = {
+                 admin: Option[Boolean] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/users").withHeaders(authToken)
       .post(Extraction.decompose(User(email, password, username, name, admin)).underscoreKeys)
   }
@@ -77,16 +77,13 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
                  password: String,
                  username: String,
                  name: String,
-                 admin: Option[Boolean] = Option(false)): Future[WSResponse] = {
+                 admin: Option[Boolean] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/users/" + userId).withHeaders(authToken)
       .put(Extraction.decompose(User(email, password, username, name, admin)).underscoreKeys)
   }
 
-  // TODO change this: id != 1 to avoid deleting the administrator account...
   def deleteUser(userId: Int): Future[WSResponse] = {
-    var uid = userId
-    if (uid == 1) uid = 0
-    WS.url(gitlabUrl + "/users/" + uid).withHeaders(authToken).delete()
+    WS.url(gitlabUrl + "/users/" + userId).withHeaders(authToken).delete()
   }
 
   /**
@@ -139,10 +136,10 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
   }
 
   def getProject(projectName: String): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/search/" + projectName).withHeaders(authToken).get()
+    WS.url(gitlabUrl + "/projects/" + projectName).withHeaders(authToken).get()
   }
 
-  def getProject(projectName: String, perPage: Option[String], page: Option[String]): Future[WSResponse] = {
+  def getProject(projectName: String, perPage: Option[String] = None, page: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/search/" + projectName).withHeaders(authToken)
       .withQueryString("per_page" -> perPage.orNull, "page" -> page.orNull).get()
   }
@@ -179,10 +176,10 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
     )
   }
 
-  //TODO why post id? fork another users'project in tests
-  //  def forkProject(projectId: Int): Future[WSResponse] = {
-  //    WS.url(gitlabUrl + "/projects/forks/" + projectId).withHeaders(authToken).post(Json.obj("id" -> projectId))
-  //  }
+  //TODO 404. Connect as another user?
+//  def forkProject(projectId: Int): Future[WSResponse] = {
+//    WS.url(gitlabUrl + "/projects/forks/" + projectId).withHeaders(authToken).post(Json.obj("id" -> projectId))
+//  }
 
   def deleteProject(projectId: Int): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId).withHeaders(authToken).delete()
@@ -192,23 +189,21 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
    * Team
    */
 
-  def getTeamMembers(projectId: Int, query: Option[String] = None): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectId + "/members").withHeaders(authToken).withQueryString("query" -> query.orNull).get()
+  def getTeamMembers(projectId: Int, query: Option[(String, String)] = None): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/members").withHeaders(authToken).withQueryString(query.getOrElse(("", ""))).get()
   }
 
-  //TODO check this works
-  def getTeamMembers(projectName: String, query: Option[String]): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectName + "/members").withHeaders(authToken).get()
-  }
+  //  def getTeamMembers(projectName: String, query: Option[(String, String)] = None): Future[WSResponse] = {
+  //    WS.url(gitlabUrl + "/projects/" + projectName + "/members").withHeaders(authToken).withQueryString(query.getOrElse(("", ""))).get()
+  //  }
 
   def getTeamMember(projectId: Int, userId: Int): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/members/" + userId).withHeaders(authToken).get()
   }
 
-  //TODO check this works
-  def getTeamMember(projectName: String, userId: Int): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectName + "/members/" + userId).withHeaders(authToken).get()
-  }
+  //  def getTeamMember(projectName: String, userId: Int): Future[WSResponse] = {
+  //    WS.url(gitlabUrl + "/projects/" + projectName + "/members/" + userId).withHeaders(authToken).get()
+  //  }
 
   def addTeamMember(projectId: Int, userId: Int, accessLevel: Int): Future[WSResponse] = {
     val json = ("id" -> projectId) ~ ("user_id" -> userId) ~ ("access_level" -> accessLevel)
@@ -297,7 +292,6 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
       .post(Extraction.decompose(Snippet(title, fileName, code)).underscoreKeys)
   }
 
-  //TODO check it doesn't delete the snippet with empty parameters
   def updateSnippet(projectId: Int,
                     snippetId: Int,
                     title: Option[String] = None,
@@ -414,7 +408,7 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
                         note: String,
                         path: Option[String] = None,
                         line: Option[Int] = None,
-                        line_type: Option[String] = Option("new")): Future[WSResponse] = {
+                        line_type: Option[String] = None): Future[WSResponse] = {
     val json = ("id" -> projectId) ~ ("sha" -> sha) ~ ("note" -> note) ~
       ("path" -> path) ~ ("line" -> line) ~ ("line_type" -> line_type)
     WS.url(gitlabUrl + "/projects/" + projectId + "/repository/commits/" + sha + "/comments").withHeaders(authToken).post(json)
@@ -425,9 +419,9 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
    */
 
   def getMergeRequests(projectId: Int,
-                       state: Option[String] = Option("all"),
-                       order_by: Option[String] = Option("created_at"),
-                       sort: Option[String] = Option("asc")): Future[WSResponse] = {
+                       state: Option[String] = None,
+                       order_by: Option[String] = None,
+                       sort: Option[String] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId + "/merge_requests").withHeaders(authToken)
       .withQueryString("state" -> state.orNull, "order_by" -> order_by.orNull, "sort" -> sort.orNull).get()
   }

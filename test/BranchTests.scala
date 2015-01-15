@@ -23,12 +23,8 @@ class BranchTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
 
   override def afterAll() {
     running(FakeApplication()) {
-      try {
-        val response = await(gitlabAPI.deleteBranch(projectId, "branch_name"))
-        GitlabHelper.statusCheckError(response, "Branch", -1)
-      } catch {
-        case e: UnsupportedOperationException => logger.error(e.toString)
-      }
+      val response = await(gitlabAPI.deleteBranch(projectId, "branch_name"))
+      GitlabHelper.checkDeleteAfterTest(response, BRANCH)
       GitlabHelper.deleteTestSSHKey()
       GitlabHelper.deleteTestProject()
       logger.debug("End of Branch Tests")
