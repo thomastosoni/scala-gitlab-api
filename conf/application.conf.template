@@ -17,7 +17,7 @@ logger.application=INFO
 
 # Gitlab
 # ~~~~~~
-gitlab.test-repository="XXXX"
-gitlab.test-ssh-key = "XXXX"
-gitlab.url = "XXXX/api/v3"
-gitlab.token = "XXXX"
+gitlab.test-repository = ${?GITLAB_TEST_REPOSITORY}
+gitlab.test-ssh-key = ${?GITLAB_TEST_SSH_KEY}
+gitlab.url = ${?GITLAB_URL}
+gitlab.token = ${?GITLAB_TOKEN}

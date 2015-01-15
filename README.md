@@ -1,5 +1,7 @@
 # Scala Gitlab API
 
+[ ![Codeship Status for thomas-tosoni/scala-gitlab-api](https://codeship.com/projects/b9ceb0f0-7f0d-0132-e3f0-72e1afbc4410/status?branch=master)](https://codeship.com/projects/57160)
+
 This is a scala wrapper for the [Gitlab API](https://github.com/gitlabhq/gitlabhq/tree/master/doc/api) using the [Play WS API](https://www.playframework.com/documentation/2.4.x/ScalaWS).
 
 Works with Gitlab 7.6.2
