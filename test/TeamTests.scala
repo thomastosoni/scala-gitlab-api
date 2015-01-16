@@ -43,20 +43,22 @@ class TeamTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
       await(gitlabAPI.getTeamMembers(projectId)).status must be(200)
     }
 
-//    "get team members by project name" in {
-//      await(gitlabAPI.getTeamMembers(testProjectName)).status must be(200)
-//    }
+    //    "get team members by project name" in {
+    //      await(gitlabAPI.getTeamMembersByName(testProjectName)).status must be(200)
+    //    }
 
     "get a team member by project id" in {
       await(gitlabAPI.getTeamMember(projectId, userId)).status must be(200)
     }
 
-//    "get a team member by project name" in {
-//      await(gitlabAPI.getTeamMember(testProjectName, userId)).status must be(200)
-//    }
+    //    "get a team member by project name" in {
+    //      await(gitlabAPI.getTeamMember(testProjectName, userId)).status must be(200)
+    //    }
 
     "update team member access level" in {
-      await(gitlabAPI.updateTeamMemberAccessLevel(projectId, userId, 40)).status must be(200)
+      val response = await(gitlabAPI.updateTeamMemberAccessLevel(projectId, userId, 20))
+      response.status must be(200)
+      (response.json \ "access_level").as[Int] must be(20)
     }
 
     // Revoking team membership for a user who is not currently a team member is considered success.

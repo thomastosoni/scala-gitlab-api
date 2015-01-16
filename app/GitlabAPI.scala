@@ -67,9 +67,33 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
                  password: String,
                  username: String,
                  name: String,
-                 admin: Option[Boolean] = None): Future[WSResponse] = {
+                 skype: Option[String] = None,
+                 linkedin: Option[String] = None,
+                 twitter: Option[String] = None,
+                 websiteUrl: Option[String] = None,
+                 projectsLimit: Option[Int] = None,
+                 externUid: Option[String] = None,
+                 provider: Option[String] = None,
+                 bio: Option[String] = None,
+                 admin: Option[Boolean] = None,
+                 canCreateGroup: Option[Boolean] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/users").withHeaders(authToken)
-      .post(Extraction.decompose(User(email, password, username, name, admin)).underscoreKeys)
+      .post(Extraction.decompose(User(
+      email,
+      password,
+      username,
+      name,
+      skype,
+      linkedin,
+      twitter,
+      websiteUrl,
+      projectsLimit,
+      externUid,
+      provider,
+      bio,
+      admin,
+      canCreateGroup
+    )).underscoreKeys)
   }
 
   def updateUser(userId: Int,
@@ -77,9 +101,33 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
                  password: String,
                  username: String,
                  name: String,
-                 admin: Option[Boolean] = None): Future[WSResponse] = {
+                 skype: Option[String] = None,
+                 linkedin: Option[String] = None,
+                 twitter: Option[String] = None,
+                 websiteUrl: Option[String] = None,
+                 projectsLimit: Option[Int] = None,
+                 externUid: Option[String] = None,
+                 provider: Option[String] = None,
+                 bio: Option[String] = None,
+                 admin: Option[Boolean] = None,
+                 canCreateGroup: Option[Boolean] = None): Future[WSResponse] = {
     WS.url(gitlabUrl + "/users/" + userId).withHeaders(authToken)
-      .put(Extraction.decompose(User(email, password, username, name, admin)).underscoreKeys)
+      .put(Extraction.decompose(User(
+      email,
+      password,
+      username,
+      name,
+      skype,
+      linkedin,
+      twitter,
+      websiteUrl,
+      projectsLimit,
+      externUid,
+      provider,
+      bio,
+      admin,
+      canCreateGroup
+    )).underscoreKeys)
   }
 
   def deleteUser(userId: Int): Future[WSResponse] = {
@@ -118,9 +166,16 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
    * Projects
    */
 
-  def getProjects(archivedOpt: Option[Boolean] = None): Future[WSResponse] = {
-    val archived = archivedOpt exists { archivedResult => archivedResult }
-    WS.url(gitlabUrl + "/projects").withHeaders(authToken).withQueryString("archived" -> archived.toString).get()
+  def getProjects(archived: Option[Boolean] = None,
+                  orderBy: Option[String] = None,
+                  sort: Option[String] = None,
+                  search: Option[String] = None): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects").withHeaders(authToken).withQueryString(
+      "archived" -> archived.map(archived => archived.toString).orNull,
+      "order_by" -> orderBy.orNull,
+      "sort" -> sort.orNull,
+      "search" -> search.orNull
+    ).get()
   }
 
   def getOwnedProjects: Future[WSResponse] = {
@@ -135,13 +190,24 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
     WS.url(gitlabUrl + "/projects/" + projectId).withHeaders(authToken).get()
   }
 
-  def getProject(projectName: String): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectName).withHeaders(authToken).get()
-  }
+  // TODO should work too
+  //  def getProject(nameOrNamespace: String): Future[WSResponse] = {
+  //    val url = gitlabUrl + "/projects/" + nameOrNamespace + java.net.URLEncoder.encode("/" + nameOrNamespace, "UTF-8")
+  //    logger.error(url)
+  //    WS.url(url).withHeaders(authToken).get()
+  //  }
 
-  def getProject(projectName: String, perPage: Option[String] = None, page: Option[String] = None): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/search/" + projectName).withHeaders(authToken)
-      .withQueryString("per_page" -> perPage.orNull, "page" -> page.orNull).get()
+  def getProject(projectName: String,
+                 perPage: Option[String] = None,
+                 page: Option[String] = None,
+                 orderBy: Option[String] = None,
+                 sort: Option[String] = None): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/search/" + projectName).withHeaders(authToken).withQueryString(
+      "per_page" -> perPage.orNull,
+      "page" -> page.orNull,
+      "order_by" -> orderBy.orNull,
+      "sort" -> sort.orNull
+    ).get()
   }
 
   def getProjectEvents(projectId: Int): Future[WSResponse] = {
@@ -176,10 +242,39 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
     )
   }
 
-  //TODO 404. Connect as another user?
-//  def forkProject(projectId: Int): Future[WSResponse] = {
-//    WS.url(gitlabUrl + "/projects/forks/" + projectId).withHeaders(authToken).post(Json.obj("id" -> projectId))
-//  }
+  def createProjectForUser(userId: Int,
+                           name: String,
+                           path: Option[String] = None,
+                           namespaceId: Option[Int] = None,
+                           description: Option[String] = None,
+                           issuesEnabled: Option[Boolean] = None,
+                           mergeRequestsEnabled: Option[Boolean] = None,
+                           wikiEnabled: Option[Boolean] = None,
+                           snippetsEnabled: Option[Boolean] = None,
+                           public: Option[Boolean] = None,
+                           visibilityLevel: Option[Int] = None,
+                           importUrl: Option[String] = None): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/user/" + userId).withHeaders(authToken).post(Extraction.decompose(
+      Project(
+        name,
+        path,
+        namespaceId,
+        description,
+        issuesEnabled,
+        mergeRequestsEnabled,
+        wikiEnabled,
+        snippetsEnabled,
+        public,
+        visibilityLevel,
+        importUrl
+      )).underscoreKeys
+    )
+  }
+
+  // TODO 404. Connect as another user?
+  //  def forkProject(projectId: Int): Future[WSResponse] = {
+  //    WS.url(gitlabUrl + "/projects/forks/" + projectId).withHeaders(authToken).post(Json.obj("id" -> projectId))
+  //  }
 
   def deleteProject(projectId: Int): Future[WSResponse] = {
     WS.url(gitlabUrl + "/projects/" + projectId).withHeaders(authToken).delete()
@@ -189,12 +284,13 @@ class GitlabAPI(gitlabUrl: String, gitlabToken: String) extends Controller with 
    * Team
    */
 
-  def getTeamMembers(projectId: Int, query: Option[(String, String)] = None): Future[WSResponse] = {
-    WS.url(gitlabUrl + "/projects/" + projectId + "/members").withHeaders(authToken).withQueryString(query.getOrElse(("", ""))).get()
+  def getTeamMembers(projectId: Int, query: Option[String] = None): Future[WSResponse] = {
+    WS.url(gitlabUrl + "/projects/" + projectId + "/members").withHeaders(authToken).withQueryString("query" -> query.orNull).get()
   }
 
-  //  def getTeamMembers(projectName: String, query: Option[(String, String)] = None): Future[WSResponse] = {
-  //    WS.url(gitlabUrl + "/projects/" + projectName + "/members").withHeaders(authToken).withQueryString(query.getOrElse(("", ""))).get()
+  // TODO Project Name?
+  //  def getTeamMembersByName(projectName: String, query: Option[String] = None): Future[WSResponse] = {
+  //    WS.url(gitlabUrl + "/projects/" + projectName + "/members").withHeaders(authToken).withQueryString("query" -> query.orNull).get()
   //  }
 
   def getTeamMember(projectId: Int, userId: Int): Future[WSResponse] = {

@@ -30,26 +30,27 @@ class UserTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
     }
 
     "create a user with name: " + userName + ", username: " + userUsername + " and email: " + email in {
-      val response = await(gitlabAPI.createUser(email, password, userUsername, userName, None))
+      val response = await(gitlabAPI.createUser(email, password, userUsername, userName))
       response.status must be(201)
       userId = (response.json \ "id").as[Int]
     }
 
-    "get all users by email: " + email in {
+    "get all users with email: " + email in {
       val response = await(gitlabAPI.getUserByEmail(email))
       response.status must be(200)
       (response.json \\ "email").map(_.as[String]).head must be(email)
     }
 
-    "get user by username: " + userUsername in {
+    "get all users with username: " + userUsername in {
       val response = await(gitlabAPI.getUserByUsername(userUsername))
       response.status must be(200)
       (response.json \\ "username").map(_.as[String]).head must be(userUsername)
     }
 
     "update a user" in {
-      val response = await(gitlabAPI.updateUser(userId, email, password, userUsername, "test_name_updated"))
+      val response = await(gitlabAPI.updateUser(userId, email, password, userUsername, name = "test_name_updated"))
       response.status must be(200)
+      (response.json \ "name").as[String] must be("test_name_updated")
     }
 
     "delete a user" in {
