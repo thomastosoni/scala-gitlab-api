@@ -15,3 +15,5 @@ dist/
 /RUNNING_PID
 /.settings
 application.conf
+activator
+activator.bat
