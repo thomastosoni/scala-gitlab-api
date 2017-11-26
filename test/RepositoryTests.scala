@@ -1,10 +1,9 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class RepositoryTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class RepositoryTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   lazy val logger = Logger(classOf[RepositoryTests])
 
@@ -15,24 +14,20 @@ class RepositoryTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAl
   var commitSHA = ""
 
   override def beforeAll(): Unit = {
-    running(FakeApplication()) {
-      GitlabHelper.createTestSSHKey
-      projectId = GitlabHelper.createTestProject
-      val branchResponse = await(gitlabAPI.getBranch(projectId, "master"))
-      if (branchResponse.status == 200) {
-        commitSHA = (branchResponse.json \ "commit" \ "id").as[String]
-      } else logger.error("Before All: Didn't create test branch")
-      logger.debug("Starting Repository Tests")
-    }
+    GitlabHelper.createTestSSHKey
+    projectId = GitlabHelper.createTestProject
+    val branchResponse = await(gitlabAPI.getBranch(projectId, "master"))
+    if (branchResponse.status == 200) {
+      commitSHA = (branchResponse.json \ "commit" \ "id").as[String]
+    } else logger.error("Before All: Didn't create test branch")
+    logger.debug("Starting Repository Tests")
   }
 
   override def afterAll() {
-    running(FakeApplication()) {
-      GitlabHelper.deleteTestSSHKey()
-      GitlabHelper.deleteTestProject()
-      logger.debug("End of Repository Tests")
-      Thread.sleep(1000L)
-    }
+    GitlabHelper.deleteTestSSHKey()
+    GitlabHelper.deleteTestProject()
+    logger.debug("End of Repository Tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage a repository " should {

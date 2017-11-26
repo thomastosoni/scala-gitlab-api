@@ -1,10 +1,9 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class SnippetNoteTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class SnippetNoteTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   lazy val logger = Logger(classOf[SnippetNoteTests])
 
@@ -16,22 +15,18 @@ class SnippetNoteTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterA
   var noteId = -1
 
   override def beforeAll(): Unit = {
-    running(FakeApplication()) {
-      projectId = GitlabHelper.createEmptyTestProject
-      val snippetResponse = await(gitlabAPI.createSnippet(projectId, "Snippet Title", "snippet", "code"))
-      if (snippetResponse.status == 201) {
-        snippetId = (snippetResponse.json \ "id").as[Int]
-      } else logger.error("Didn't create test snippet")
-      logger.debug("Starting Snippet Note Tests")
-    }
+    projectId = GitlabHelper.createEmptyTestProject
+    val snippetResponse = await(gitlabAPI.createSnippet(projectId, "Snippet Title", "snippet", "code"))
+    if (snippetResponse.status == 201) {
+      snippetId = (snippetResponse.json \ "id").as[Int]
+    } else logger.error("Didn't create test snippet")
+    logger.debug("Starting Snippet Note Tests")
   }
 
   override def afterAll() {
-    running(FakeApplication()) {
-      GitlabHelper.deleteTestProject()
-      logger.debug("End of Snippet Note Tests")
-      Thread.sleep(1000L)
-    }
+    GitlabHelper.deleteTestProject()
+    logger.debug("End of Snippet Note Tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage snippet notes" should {
@@ -47,7 +42,7 @@ class SnippetNoteTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterA
     }
 
     "get an snippet note" in {
-      await(gitlabAPI.getSnippetNote(projectId, snippetId, noteId)).status must be (200)
+      await(gitlabAPI.getSnippetNote(projectId, snippetId, noteId)).status must be(200)
     }
 
     //    TODO 405 unauthorized?

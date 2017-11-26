@@ -1,10 +1,9 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play._
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class UserTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class UserTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   lazy val logger = Logger(classOf[UserTests])
 
@@ -16,12 +15,10 @@ class UserTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   var userId = -1
 
   override def afterAll() {
-    running(FakeApplication()) {
-      val response = await(gitlabAPI.deleteUser(userId))
-      GitlabHelper.checkDeleteAfterTest(response, USER)
-      logger.debug("End of User Tests")
-      Thread.sleep(1000L)
-    }
+    val response = await(gitlabAPI.deleteUser(userId))
+    GitlabHelper.checkDeleteAfterTest(response, USER)
+    logger.debug("End of User Tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage users" should {

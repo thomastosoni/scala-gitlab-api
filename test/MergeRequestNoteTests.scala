@@ -1,11 +1,9 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.libs.json.JsValue
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class MergeRequestNoteTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class MergeRequestNoteTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   lazy val logger = Logger(classOf[MergeRequestNoteTests])
 
@@ -22,31 +20,27 @@ class MergeRequestNoteTests extends PlaySpec with OneAppPerSuite with BeforeAndA
   var lastCommitSHA = ""
 
   override def beforeAll(): Unit = {
-    running(FakeApplication()) {
-      GitlabHelper.createTestSSHKey
-      projectId = GitlabHelper.createTestProject
-      val commitsResponse = await(gitlabAPI.getCommits(projectId))
-      if (commitsResponse.status == 200) {
-        lastCommitSHA = (commitsResponse.json \\ "id").map(_.as[String]).head
-        val branchResponse = await(gitlabAPI.createBranch(projectId, sourceBranch, lastCommitSHA))
-        if (branchResponse.status == 201) {
-          val mergeRequestResponse = await(gitlabAPI.addMergeRequest(projectId, sourceBranch, targetBranch, mergeTitle))
-          if (mergeRequestResponse.status == 201) {
-            mergeRequestId = (mergeRequestResponse.json \ "id").as[Int]
-          } else logger.error("Before All: Didn't create merge request")
-        } else logger.error("Before All: Didn't create branch")
-      } else logger.error("Before All: Didn't create commit")
-      logger.debug("Starting Merge Request Note Tests")
-    }
+    GitlabHelper.createTestSSHKey
+    projectId = GitlabHelper.createTestProject
+    val commitsResponse = await(gitlabAPI.getCommits(projectId))
+    if (commitsResponse.status == 200) {
+      lastCommitSHA = (commitsResponse.json \\ "id").map(_.as[String]).head
+      val branchResponse = await(gitlabAPI.createBranch(projectId, sourceBranch, lastCommitSHA))
+      if (branchResponse.status == 201) {
+        val mergeRequestResponse = await(gitlabAPI.addMergeRequest(projectId, sourceBranch, targetBranch, mergeTitle))
+        if (mergeRequestResponse.status == 201) {
+          mergeRequestId = (mergeRequestResponse.json \ "id").as[Int]
+        } else logger.error("Before All: Didn't create merge request")
+      } else logger.error("Before All: Didn't create branch")
+    } else logger.error("Before All: Didn't create commit")
+    logger.debug("Starting Merge Request Note Tests")
   }
 
   override def afterAll() {
-    running(FakeApplication()) {
-      GitlabHelper.deleteTestSSHKey()
-      GitlabHelper.deleteTestProject()
-      logger.debug("End of Merge Request Note Tests")
-      Thread.sleep(1000L)
-    }
+    GitlabHelper.deleteTestSSHKey()
+    GitlabHelper.deleteTestProject()
+    logger.debug("End of Merge Request Note Tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage merge request notes" should {
@@ -62,7 +56,7 @@ class MergeRequestNoteTests extends PlaySpec with OneAppPerSuite with BeforeAndA
     }
 
     "get an issue note" in {
-      await(gitlabAPI.getMergeRequestNote(projectId, mergeRequestId, noteId)).status must be (200)
+      await(gitlabAPI.getMergeRequestNote(projectId, mergeRequestId, noteId)).status must be(200)
     }
 
     //   TODO 405 unauthorized?

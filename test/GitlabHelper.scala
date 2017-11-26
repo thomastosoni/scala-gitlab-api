@@ -1,38 +1,43 @@
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import play.api.Logger
 import play.api.libs.ws.WSResponse
 import play.api.test.Helpers._
+import play.api.test.WsTestClient
 
 object GitlabHelper {
-  lazy val conf = ConfigFactory.load()
-  lazy val sshKey = conf.getString("gitlab.test-ssh-key")
-  lazy val depot = conf.getString("gitlab.test-repository")
-  lazy val gitlabUrl = conf.getString("gitlab.url")
-  lazy val gitlabToken = conf.getString("gitlab.token")
-  lazy val logger = Logger("GitlabHelper")
+  lazy val conf: Config = ConfigFactory.load()
+  lazy val sshKey: String = conf.getString("gitlab.test-ssh-key")
+  lazy val depot: String = conf.getString("gitlab.test-repository")
+  lazy val gitlabUrl: String = conf.getString("gitlab.url")
+  lazy val gitlabToken: String = conf.getString("gitlab.token")
+  lazy val logger: Logger = Logger("GitlabHelper")
 
-  lazy val gitlabAPI = new GitlabAPI(gitlabUrl, gitlabToken)
+  implicit def withGitlabAPI[T](block: GitlabAPI => T): T = {
+    WsTestClient.withClient { client =>
+      block(new GitlabAPI(client, gitlabUrl, gitlabToken))
+    }
+  }
 
   // Waiting time for project setup branches and commits in seconds
-  val branchesImportMaxWaitingTime = 40
-  val commitsImportMaxWaitingTime = 10
+  val branchesImportMaxWaitingTime: Int = 40
+  val commitsImportMaxWaitingTime: Int = 10
 
   // PROJECT
-  val projectName = "test_project"
-  var projectId = -1
+  val projectName: String = "test_project"
+  var projectId: Int = -1
 
   // USER
-  var userId = -1
-  val userName = "test_name"
-  val userUsername = "test_username"
-  val email = "test@gitlabtest.com"
-  val password = "test_password"
+  var userId: Int = -1
+  val userName: String = "test_name"
+  val userUsername: String = "test_username"
+  val email: String = "test@gitlabtest.com"
+  val password: String = "test_password"
 
   // SYSTEM HOOKS
-  val systemHookUrl = "http://localhost:8000"
+  val systemHookUrl: String = "http://localhost:8000"
 
   // SSH KEY
-  var sshKeyId = -1
+  var sshKeyId: Int = -1
 
   private def statusCheck(response: WSResponse, resource: Resource): Unit = {
     response.status match {
@@ -58,10 +63,10 @@ object GitlabHelper {
   }
 
   /**
-   * User
-   */
+    * User
+    */
 
-  def createTestUser: Int = {
+  def createTestUser(implicit gitlabAPI: GitlabAPI): Int = {
     try {
       val response = await(gitlabAPI.createUser(email, password, userUsername, userName))
       userId = (response.json \ "id").as[Int]
@@ -72,7 +77,7 @@ object GitlabHelper {
     }
   }
 
-  def deleteTestUser(): Unit = {
+  def deleteTestUser(implicit gitlabAPI: GitlabAPI): Unit = {
     try {
       val response = await(gitlabAPI.deleteUser(userId))
       statusCheck(response, USER)
@@ -82,10 +87,10 @@ object GitlabHelper {
   }
 
   /**
-   * Project
-   */
+    * Project
+    */
 
-  def waitForProjectSetup(projectId: Int): Unit = {
+  def waitForProjectSetup(projectId: Int)(implicit gitlabAPI: GitlabAPI): Unit = {
     logger.debug("Waiting for project: " + depot + " to be imported...")
     var repeat = branchesImportMaxWaitingTime / 10
     var branches: Seq[String] = Seq.empty
@@ -118,9 +123,9 @@ object GitlabHelper {
   }
 
   // TODO Refactor createTestProject and createEmptyTestProject. Check if test project exist. Generate name. Handle kill.
-  def createTestProject: Int = {
+  def createTestProject(implicit gitlabAPI: GitlabAPI): Int = {
     try {
-      val response = await(gitlabAPI.createProject(GitlabHelper.projectName, importUrl = Option(depot)))
+      val response = await(gitlabAPI.createProject(projectName, importUrl = Option(depot)))
       if (response.status == 201) {
         projectId = (response.json \ "id").as[Int]
         waitForProjectSetup(projectId)
@@ -137,9 +142,9 @@ object GitlabHelper {
     -1
   }
 
-  def createEmptyTestProject: Int = {
+  def createEmptyTestProject(implicit gitlabAPI: GitlabAPI): Int = {
     try {
-      val response = await(gitlabAPI.createProject(GitlabHelper.projectName))
+      val response = await(gitlabAPI.createProject(projectName))
       if (response.status == 201) {
         logger.debug("Created Empty Test Project: " + response.json.toString())
         projectId = (response.json \ "id").as[Int]
@@ -153,16 +158,16 @@ object GitlabHelper {
     -1
   }
 
-  def deleteTestProject(): Unit = {
+  def deleteTestProject()(implicit gitlabAPI: GitlabAPI): Unit = {
     val response = await(gitlabAPI.deleteProject(projectId))
     statusCheck(response, PROJECT)
   }
 
   /**
-   * SSH Key
-   */
+    * SSH Key
+    */
 
-  def createTestSSHKey: Int = {
+  def createTestSSHKey(implicit gitlabAPI: GitlabAPI): Int = {
     try {
       val response = await(gitlabAPI.addSSHKey("test_ssh_key", sshKey))
       if (response.status == 201) {
@@ -178,7 +183,7 @@ object GitlabHelper {
     -1
   }
 
-  def deleteTestSSHKey(): Unit = {
+  def deleteTestSSHKey()(implicit gitlabAPI: GitlabAPI): Unit = {
     val response = await(gitlabAPI.deleteSSHKey(sshKeyId))
     statusCheck(response, SSH_KEY)
   }

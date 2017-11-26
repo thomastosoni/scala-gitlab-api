@@ -1,11 +1,9 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class GroupTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
-  implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
+class GroupTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   lazy val logger = Logger(classOf[GroupTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
@@ -18,22 +16,18 @@ class GroupTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   var userId = -1
 
   override def beforeAll(): Unit = {
-    running(FakeApplication()) {
       userId = GitlabHelper.createTestUser
       projectId = GitlabHelper.createEmptyTestProject
       logger.debug("Starting Group Tests")
-    }
   }
 
   override def afterAll() {
-    running(FakeApplication()) {
       GitlabHelper.deleteTestUser()
       GitlabHelper.deleteTestProject()
       val response = await(gitlabAPI.deleteGroup(groupId))
       GitlabHelper.checkDeleteAfterTest(response, GROUP)
       logger.debug("End of Group Tests")
       Thread.sleep(1000L)
-    }
   }
 
   "GitlabAPI must manage groups" should {

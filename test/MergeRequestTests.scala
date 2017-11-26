@@ -1,10 +1,9 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class MergeRequestTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class MergeRequestTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   lazy val logger = Logger(classOf[MergeRequestTests])
 
@@ -20,25 +19,21 @@ class MergeRequestTests extends PlaySpec with OneAppPerSuite with BeforeAndAfter
   var lastCommitSHA = ""
 
   override def beforeAll(): Unit = {
-    running(FakeApplication()) {
-      GitlabHelper.createTestSSHKey
-      projectId = GitlabHelper.createTestProject
-      val commitsResponse = await(gitlabAPI.getCommits(projectId))
-      if (commitsResponse.status == 200) {
-        lastCommitSHA = (commitsResponse.json \\ "id").map(_.as[String]).head
-        await(gitlabAPI.createBranch(projectId, sourceBranch, lastCommitSHA))
-      } else logger.error("Before All: Didn't get commits")
-      logger.debug("Starting Merge Request Tests")
-    }
+    GitlabHelper.createTestSSHKey
+    projectId = GitlabHelper.createTestProject
+    val commitsResponse = await(gitlabAPI.getCommits(projectId))
+    if (commitsResponse.status == 200) {
+      lastCommitSHA = (commitsResponse.json \\ "id").map(_.as[String]).head
+      await(gitlabAPI.createBranch(projectId, sourceBranch, lastCommitSHA))
+    } else logger.error("Before All: Didn't get commits")
+    logger.debug("Starting Merge Request Tests")
   }
 
   override def afterAll() {
-    running(FakeApplication()) {
-      GitlabHelper.deleteTestProject()
-      GitlabHelper.deleteTestSSHKey()
-      logger.debug("End of Merge Request Tests")
-      Thread.sleep(1000L)
-    }
+    GitlabHelper.deleteTestProject()
+    GitlabHelper.deleteTestSSHKey()
+    logger.debug("End of Merge Request Tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage merge operations" should {

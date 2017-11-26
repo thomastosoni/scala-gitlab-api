@@ -1,17 +1,17 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class FileTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
-  implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext
+
+class FileTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   lazy val logger = Logger(classOf[FileTests])
 
-  val gitlabAPI = GitlabHelper.gitlabAPI
-  val projectName = GitlabHelper.projectName
+  val gitlabAPI: GitlabAPI = GitlabHelper.gitlabAPI
+  val projectName: String = GitlabHelper.projectName
 
-  var projectId = -1
+  var projectId: Int = -1
 
   val fileName = "test_file"
   val fileContent = "test_content"
@@ -19,15 +19,12 @@ class FileTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   var targetBranch = "master"
 
   override def beforeAll(): Unit = {
-    running(FakeApplication()) {
       GitlabHelper.createTestSSHKey
       projectId = GitlabHelper.createTestProject
       logger.debug("Starting File Tests")
-    }
   }
 
   override def afterAll() {
-    running(FakeApplication()) {
       try {
         val response = await(gitlabAPI.deleteFile(projectId, fileName, targetBranch, fileCommitMessage))
         // Returns 400 ("You can only edit text files") if it tries to delete a non-existent file?
@@ -39,7 +36,6 @@ class FileTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
       GitlabHelper.deleteTestProject()
       logger.debug("End of File Tests")
       Thread.sleep(1000L)
-    }
   }
 
   "GitlabAPI must manage repository files" should {

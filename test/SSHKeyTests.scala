@@ -1,10 +1,9 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class SSHKeyTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll  {
+class SSHKeyTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   lazy val logger = Logger(classOf[SSHKeyTests])
 
@@ -13,12 +12,10 @@ class SSHKeyTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll  {
   var sshKeyId = 0
 
   override def afterAll() {
-    running(FakeApplication()) {
-      val SShKeyResponse = await(gitlabAPI.deleteSSHKey(sshKeyId))
-      GitlabHelper.checkDeleteAfterTest(SShKeyResponse, SSH_KEY)
-      logger.debug("End of SSHKeys tests")
-      Thread.sleep(1000L)
-    }
+    val SShKeyResponse = await(gitlabAPI.deleteSSHKey(sshKeyId))
+    GitlabHelper.checkDeleteAfterTest(SShKeyResponse, SSH_KEY)
+    logger.debug("End of SSHKeys tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage SSH keys" should {

@@ -1,10 +1,9 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class MilestoneTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class MilestoneTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   lazy val logger = Logger(classOf[MilestoneTests])
 
@@ -16,20 +15,16 @@ class MilestoneTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll
   var milestoneId = -1
 
   override def beforeAll(): Unit = {
-    running(FakeApplication()) {
-      GitlabHelper.createTestSSHKey
-      projectId = GitlabHelper.createEmptyTestProject
-      logger.debug("Starting Milestone Tests")
-    }
+    GitlabHelper.createTestSSHKey
+    projectId = GitlabHelper.createEmptyTestProject
+    logger.debug("Starting Milestone Tests")
   }
 
   override def afterAll() {
-    running(FakeApplication()) {
-      GitlabHelper.deleteTestSSHKey()
-      GitlabHelper.deleteTestProject()
-      logger.debug("End of Milestone Tests")
-      Thread.sleep(1000L)
-    }
+    GitlabHelper.deleteTestSSHKey()
+    GitlabHelper.deleteTestProject()
+    logger.debug("End of Milestone Tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage milestones" should {
@@ -45,7 +40,7 @@ class MilestoneTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll
     }
 
     "get a project milestone" in {
-      await(gitlabAPI.getMilestone(projectId, milestoneId)).status must be (200)
+      await(gitlabAPI.getMilestone(projectId, milestoneId)).status must be(200)
     }
 
     "update a project milestone" in {

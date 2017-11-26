@@ -1,13 +1,13 @@
 import java.net.URL
 
 import org.scalatest.BeforeAndAfter
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
-import play.api.test.Helpers._
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 
-class ConnexionTests extends PlaySpec with OneAppPerSuite with BeforeAndAfter {
-  implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext
 
-  val gitlabAPI = GitlabHelper.gitlabAPI
+class ConnexionTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfter {
+  val gitlabAPI: GitlabAPI = GitlabHelper.gitlabAPI
 
   "GitlabAPI" must {
     "not be able to connect with invalid credentials" in {

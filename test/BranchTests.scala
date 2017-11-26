@@ -1,35 +1,45 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
-import play.api.Logger
-import play.api.test.FakeApplication
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
+import play.api.{Application, Logger}
 
-class BranchTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
-  implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  lazy val logger = Logger(classOf[BranchTests])
+class BranchTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
+  import GitlabHelper._
 
-  val gitlabAPI = GitlabHelper.gitlabAPI
-  val projectName = GitlabHelper.projectName
-  var projectId = -1
-  var commitSHA = ""
+  lazy val logger: Logger = Logger(classOf[BranchTests])
 
-  override def beforeAll(): Unit = {
-    running(FakeApplication()) {
-      GitlabHelper.createTestSSHKey
-      projectId = GitlabHelper.createTestProject
-      logger.debug("Starting Branch Tests")
+  val projectName: String = GitlabHelper.projectName
+  var projectId: Int = -1
+  var commitSHA: String = ""
+
+  implicit var gitlabAPI: GitlabAPI = _
+
+  override def fakeApplication(): Application = {
+    new GuiceApplicationBuilder().configure(Map("ehcacheplugin" -> "disabled")).build()
+  }
+
+  private def setupGitlabApi() {
+    withGitlabAPI { api =>
+      gitlabAPI = api
     }
   }
 
+  override def beforeAll(): Unit = {
+    setupGitlabApi()
+    createTestSSHKey
+    projectId = createTestProject
+    logger.debug("Starting Branch Tests")
+  }
+
   override def afterAll() {
-    running(FakeApplication()) {
-      val response = await(gitlabAPI.deleteBranch(projectId, "branch_name"))
-      GitlabHelper.checkDeleteAfterTest(response, BRANCH)
-      GitlabHelper.deleteTestSSHKey()
-      GitlabHelper.deleteTestProject()
-      logger.debug("End of Branch Tests")
-      Thread.sleep(1000L)
-    }
+    val response = await(gitlabAPI.deleteBranch(projectId, "branch_name"))
+    checkDeleteAfterTest(response, BRANCH)
+    deleteTestSSHKey()
+    deleteTestProject()
+    logger.debug("End of Branch Tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage project branches" should {

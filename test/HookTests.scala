@@ -1,10 +1,9 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class HookTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+class HookTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   lazy val logger = Logger(classOf[HookTests])
 
@@ -16,14 +15,11 @@ class HookTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   var projectHookId = -1
 
   override def beforeAll(): Unit = {
-    running(FakeApplication()) {
       projectId = GitlabHelper.createEmptyTestProject
       logger.debug("Starting Hook Tests")
-    }
   }
 
   override def afterAll() {
-    running(FakeApplication()) {
       GitlabHelper.deleteTestProject()
       val systemHookResponse = await(gitlabAPI.deleteHook(systemHookId))
       GitlabHelper.checkDeleteAfterTest(systemHookResponse, SYSTEM_HOOK)
@@ -31,7 +27,6 @@ class HookTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
       GitlabHelper.checkDeleteAfterTest(projectHookResponse, PROJECT_HOOK)
       logger.debug("End of Hook tests")
       Thread.sleep(1000L)
-    }
   }
 
   "GitlabAPI must manage system hooks" should {

@@ -1,11 +1,8 @@
-import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
-import org.slf4j.LoggerFactory
-import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
+package tmp
 
-class ProjectTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
+import play.api.Logger
+
+class ProjectTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   lazy val logger = Logger(classOf[ProjectTests])
 
@@ -14,12 +11,10 @@ class ProjectTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
   var projectId = -1
 
   override def afterAll() {
-    running(FakeApplication()) {
-      val response = await(gitlabAPI.deleteProject(projectId))
-      GitlabHelper.checkDeleteAfterTest(response, PROJECT)
-      logger.debug("End of Project tests")
-      Thread.sleep(1000L)
-    }
+    val response = await(gitlabAPI.deleteProject(projectId))
+    GitlabHelper.checkDeleteAfterTest(response, PROJECT)
+    logger.debug("End of Project tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage projects" should {
@@ -54,9 +49,9 @@ class ProjectTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
       (response.json \\ "name").map(_.as[String]).head must be(projectName)
     }
 
-//    "fork project" in {
-//      await(gitlabAPI.forkProject(projectId)).status must be (200)
-//    }
+    //    "fork project" in {
+    //      await(gitlabAPI.forkProject(projectId)).status must be (200)
+    //    }
 
     "delete a project" in {
       val response = await(gitlabAPI.deleteProject(projectId))

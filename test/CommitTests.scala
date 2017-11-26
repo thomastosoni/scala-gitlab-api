@@ -1,33 +1,29 @@
 import org.scalatest.BeforeAndAfterAll
-import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import org.scalatestplus.play.PlaySpec
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
-import play.api.test.FakeApplication
-import play.api.test.Helpers._
 
-class CommitTests extends PlaySpec with OneAppPerSuite with BeforeAndAfterAll {
-  implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext
+
+class CommitTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   lazy val logger = Logger(classOf[CommitTests])
 
-  val gitlabAPI = GitlabHelper.gitlabAPI
-  val projectName = GitlabHelper.projectName
-  var projectId = -1
+  val gitlabAPI: GitlabAPI = GitlabHelper.gitlabAPI
+  val projectName: String = GitlabHelper.projectName
+  var projectId: Int = -1
   var commitSHA = ""
 
   override def beforeAll(): Unit = {
-    running(FakeApplication()) {
-      GitlabHelper.createTestSSHKey
-      projectId = GitlabHelper.createTestProject
-      logger.debug("Starting Commit Tests")
-    }
+    GitlabHelper.createTestSSHKey
+    projectId = GitlabHelper.createTestProject
+    logger.debug("Starting Commit Tests")
   }
 
   override def afterAll() {
-    running(FakeApplication()) {
-      GitlabHelper.deleteTestProject()
-      GitlabHelper.deleteTestSSHKey()
-      logger.debug("End of Branch Tests")
-      Thread.sleep(1000L)
-    }
+    GitlabHelper.deleteTestProject()
+    GitlabHelper.deleteTestSSHKey()
+    logger.debug("End of Branch Tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage commits" should {
