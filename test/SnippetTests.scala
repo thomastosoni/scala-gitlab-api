@@ -2,10 +2,10 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
+import play.api.test.Helpers._
 
 class SnippetTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
-  implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  lazy val logger = Logger(classOf[SnippetTests])
+    lazy val logger = Logger(classOf[SnippetTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val projectName = GitlabHelper.projectName

@@ -7,16 +7,22 @@ import play.api.test.WsTestClient
 object GitlabHelper {
   lazy val conf: Config = ConfigFactory.load()
   lazy val sshKey: String = conf.getString("gitlab.test-ssh-key")
-  lazy val depot: String = conf.getString("gitlab.test-repository")
+  lazy val repository: String = conf.getString("gitlab.test-repository")
   lazy val gitlabUrl: String = conf.getString("gitlab.url")
   lazy val gitlabToken: String = conf.getString("gitlab.token")
   lazy val logger: Logger = Logger("GitlabHelper")
+  implicit var gitlabAPI: GitlabAPI = _
 
   implicit def withGitlabAPI[T](block: GitlabAPI => T): T = {
     WsTestClient.withClient { client =>
       block(new GitlabAPI(client, gitlabUrl, gitlabToken))
     }
   }
+
+  withGitlabAPI { api =>
+    gitlabAPI = api
+  }
+
 
   // Waiting time for project setup branches and commits in seconds
   val branchesImportMaxWaitingTime: Int = 40
@@ -66,7 +72,7 @@ object GitlabHelper {
     * User
     */
 
-  def createTestUser(implicit gitlabAPI: GitlabAPI): Int = {
+  def createTestUser: Int = {
     try {
       val response = await(gitlabAPI.createUser(email, password, userUsername, userName))
       userId = (response.json \ "id").as[Int]
@@ -77,7 +83,7 @@ object GitlabHelper {
     }
   }
 
-  def deleteTestUser(implicit gitlabAPI: GitlabAPI): Unit = {
+  def deleteTestUser(): Unit = {
     try {
       val response = await(gitlabAPI.deleteUser(userId))
       statusCheck(response, USER)
@@ -90,8 +96,8 @@ object GitlabHelper {
     * Project
     */
 
-  def waitForProjectSetup(projectId: Int)(implicit gitlabAPI: GitlabAPI): Unit = {
-    logger.debug("Waiting for project: " + depot + " to be imported...")
+  def waitForProjectSetup(projectId: Int): Unit = {
+    logger.debug("Waiting for project: " + repository + " to be imported...")
     var repeat = branchesImportMaxWaitingTime / 10
     var branches: Seq[String] = Seq.empty
     var commits: Seq[String] = Seq.empty
@@ -106,7 +112,7 @@ object GitlabHelper {
         repeat -= 1
     }
     if (branches.isEmpty)
-      throw new NoSuchElementException("Missing branches for project loaded from: " + depot + ". Maybe it needs more loading time.")
+      throw new NoSuchElementException("Missing branches for project loaded from: " + repository + ". Maybe it needs more loading time.")
 
     // Wait For Commits (x tries, each try waits for 10 seconds)
     repeat = commitsImportMaxWaitingTime / 10
@@ -119,13 +125,13 @@ object GitlabHelper {
         repeat -= 1
     }
     if (commits.isEmpty)
-      throw new NoSuchElementException("Missing commits for project loaded from: " + depot + "Maybe it needs more loading time.")
+      throw new NoSuchElementException("Missing commits for project loaded from: " + repository + "Maybe it needs more loading time.")
   }
 
   // TODO Refactor createTestProject and createEmptyTestProject. Check if test project exist. Generate name. Handle kill.
-  def createTestProject(implicit gitlabAPI: GitlabAPI): Int = {
+  def createTestProject: Int = {
     try {
-      val response = await(gitlabAPI.createProject(projectName, importUrl = Option(depot)))
+      val response = await(gitlabAPI.createProject(projectName, importUrl = Option(repository)))
       if (response.status == 201) {
         projectId = (response.json \ "id").as[Int]
         waitForProjectSetup(projectId)
@@ -142,7 +148,7 @@ object GitlabHelper {
     -1
   }
 
-  def createEmptyTestProject(implicit gitlabAPI: GitlabAPI): Int = {
+  def createEmptyTestProject: Int = {
     try {
       val response = await(gitlabAPI.createProject(projectName))
       if (response.status == 201) {
@@ -158,7 +164,7 @@ object GitlabHelper {
     -1
   }
 
-  def deleteTestProject()(implicit gitlabAPI: GitlabAPI): Unit = {
+  def deleteTestProject(): Unit = {
     val response = await(gitlabAPI.deleteProject(projectId))
     statusCheck(response, PROJECT)
   }
@@ -167,7 +173,7 @@ object GitlabHelper {
     * SSH Key
     */
 
-  def createTestSSHKey(implicit gitlabAPI: GitlabAPI): Int = {
+  def createTestSSHKey: Int = {
     try {
       val response = await(gitlabAPI.addSSHKey("test_ssh_key", sshKey))
       if (response.status == 201) {
@@ -183,7 +189,7 @@ object GitlabHelper {
     -1
   }
 
-  def deleteTestSSHKey()(implicit gitlabAPI: GitlabAPI): Unit = {
+  def deleteTestSSHKey(): Unit = {
     val response = await(gitlabAPI.deleteSSHKey(sshKeyId))
     statusCheck(response, SSH_KEY)
   }

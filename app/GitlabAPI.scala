@@ -63,7 +63,6 @@ class GitlabAPI @Inject()(ws: WSClient,
     ws.url(gitlabUrl + "/users").withHttpHeaders(authToken).withQueryStringParameters("search" -> email).get()
   }
 
-
   def createUser(email: String,
                  password: String,
                  username: String,
@@ -78,6 +77,8 @@ class GitlabAPI @Inject()(ws: WSClient,
                  bio: Option[String] = None,
                  admin: Option[Boolean] = None,
                  canCreateGroup: Option[Boolean] = None): Future[WSResponse] = {
+    println(gitlabUrl + "/users")
+    println(authToken)
     ws.url(gitlabUrl + "/users").withHttpHeaders(authToken)
       .post(Extraction.decompose(User(
         email,

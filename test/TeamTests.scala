@@ -2,10 +2,10 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
+import play.api.test.Helpers._
 
 class TeamTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
-  implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
-  lazy val logger = Logger(classOf[TeamTests])
+    lazy val logger = Logger(classOf[TeamTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
   val testProjectName = GitlabHelper.projectName

@@ -14,20 +14,11 @@ class BranchTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterA
   var projectId: Int = -1
   var commitSHA: String = ""
 
-  implicit var gitlabAPI: GitlabAPI = _
-
   override def fakeApplication(): Application = {
     new GuiceApplicationBuilder().configure(Map("ehcacheplugin" -> "disabled")).build()
   }
 
-  private def setupGitlabApi() {
-    withGitlabAPI { api =>
-      gitlabAPI = api
-    }
-  }
-
   override def beforeAll(): Unit = {
-    setupGitlabApi()
     createTestSSHKey
     projectId = createTestProject
     logger.debug("Starting Branch Tests")

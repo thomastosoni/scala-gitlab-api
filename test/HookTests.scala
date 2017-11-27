@@ -2,9 +2,9 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
+import play.api.test.Helpers._
 
 class HookTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
-  implicit val context = play.api.libs.concurrent.Execution.Implicits.defaultContext
   lazy val logger = Logger(classOf[HookTests])
 
   val gitlabAPI = GitlabHelper.gitlabAPI
@@ -15,18 +15,18 @@ class HookTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll
   var projectHookId = -1
 
   override def beforeAll(): Unit = {
-      projectId = GitlabHelper.createEmptyTestProject
-      logger.debug("Starting Hook Tests")
+    projectId = GitlabHelper.createEmptyTestProject
+    logger.debug("Starting Hook Tests")
   }
 
   override def afterAll() {
-      GitlabHelper.deleteTestProject()
-      val systemHookResponse = await(gitlabAPI.deleteHook(systemHookId))
-      GitlabHelper.checkDeleteAfterTest(systemHookResponse, SYSTEM_HOOK)
-      val projectHookResponse = await(gitlabAPI.deleteHook(projectId, projectHookId))
-      GitlabHelper.checkDeleteAfterTest(projectHookResponse, PROJECT_HOOK)
-      logger.debug("End of Hook tests")
-      Thread.sleep(1000L)
+    GitlabHelper.deleteTestProject()
+    val systemHookResponse = await(gitlabAPI.deleteHook(systemHookId))
+    GitlabHelper.checkDeleteAfterTest(systemHookResponse, SYSTEM_HOOK)
+    val projectHookResponse = await(gitlabAPI.deleteHook(projectId, projectHookId))
+    GitlabHelper.checkDeleteAfterTest(projectHookResponse, PROJECT_HOOK)
+    logger.debug("End of Hook tests")
+    Thread.sleep(1000L)
   }
 
   "GitlabAPI must manage system hooks" should {
@@ -53,7 +53,7 @@ class HookTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll
 
   "GitlabAPI must manage project hooks" should {
     "create a project hook" in {
-      val response = await(gitlabAPI.addHook(projectId,  "http://www.google.com"))
+      val response = await(gitlabAPI.addHook(projectId, "http://www.google.com"))
       response.status must be(201)
       projectHookId = (response.json \ "id").as[Int]
       projectHookId must not be 0

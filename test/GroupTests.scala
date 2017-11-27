@@ -2,6 +2,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
+import play.api.test.Helpers._
 
 class GroupTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   lazy val logger = Logger(classOf[GroupTests])
