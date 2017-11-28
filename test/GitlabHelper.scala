@@ -131,7 +131,7 @@ object GitlabHelper {
   // TODO Refactor createTestProject and createEmptyTestProject. Check if test project exist. Generate name. Handle kill.
   def createTestProject: Int = {
     try {
-      val response = await(gitlabAPI.createProject(projectName, importUrl = Option(repository)))
+      val response = await(gitlabAPI.createProject(name = Some(projectName), importUrl = Option(repository)))
       if (response.status == 201) {
         projectId = (response.json \ "id").as[Int]
         waitForProjectSetup(projectId)
@@ -150,7 +150,7 @@ object GitlabHelper {
 
   def createEmptyTestProject: Int = {
     try {
-      val response = await(gitlabAPI.createProject(projectName))
+      val response = await(gitlabAPI.createProject(name = Some(projectName)))
       if (response.status == 201) {
         logger.debug("Created Empty Test Project: " + response.json.toString())
         projectId = (response.json \ "id").as[Int]
@@ -165,7 +165,7 @@ object GitlabHelper {
   }
 
   def deleteTestProject(): Unit = {
-    val response = await(gitlabAPI.deleteProject(projectId))
+    val response = await(gitlabAPI.removeProject(projectId))
     statusCheck(response, PROJECT)
   }
 

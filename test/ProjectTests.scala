@@ -2,17 +2,22 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logger
+import play.api.libs.ws.WSResponse
 import play.api.test.Helpers._
 
 class ProjectTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfterAll {
   lazy val logger = Logger(classOf[ProjectTests])
 
-  val gitlabAPI = GitlabHelper.gitlabAPI
-  val projectName = GitlabHelper.projectName
-  var projectId = -1
+  val gitlabAPI: GitlabAPI = GitlabHelper.gitlabAPI
+  val projectName: String = GitlabHelper.projectName
+  var projectId: Int = -1
+
+  override def beforeAll() {
+    logger.debug("Starting Project tests...")
+  }
 
   override def afterAll() {
-    val response = await(gitlabAPI.deleteProject(projectId))
+    val response = await(gitlabAPI.removeProject(projectId))
     GitlabHelper.checkDeleteAfterTest(response, PROJECT)
     logger.debug("End of Project tests")
     Thread.sleep(1000L)
@@ -24,18 +29,17 @@ class ProjectTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfter
       await(gitlabAPI.getProjects()).status must be(200)
     }
 
-    "get all projects" in {
-      await(gitlabAPI.getAllProjects).status must be(200)
-    }
-
     "get owned projects" in {
-      await(gitlabAPI.getOwnedProjects).status must be(200)
+      await(gitlabAPI.getProjects(owned = Some(true))).status must be(200)
     }
 
     "create a project" in {
-      val response = await(gitlabAPI.createProject(projectName))
-      response.status must be(201)
-      projectId = (response.json \ "id").as[Int]
+      val response = await(gitlabAPI.createProject(name = Some(projectName)))
+      response match {
+        case response: WSResponse if response.status == 201 =>
+          projectId = (response.json \ "id").as[Int]
+        case _ => logger.error(response.statusText)
+      }
     }
 
     "get a project by id" in {
@@ -45,17 +49,13 @@ class ProjectTests extends PlaySpec with GuiceOneAppPerSuite with BeforeAndAfter
     }
 
     "get a project by name" in {
-      val response = await(gitlabAPI.getProject(projectName))
+      val response = await(gitlabAPI.getProjects(search = Some(projectName)))
       response.status must be(200)
-      (response.json \\ "name").map(_.as[String]).head must be(projectName)
+      (response.json \ "name").as[String].head must be(projectName)
     }
 
-    //    "fork project" in {
-    //      await(gitlabAPI.forkProject(projectId)).status must be (200)
-    //    }
-
     "delete a project" in {
-      val response = await(gitlabAPI.deleteProject(projectId))
+      val response = await(gitlabAPI.removeProject(projectId))
       response.status must be(200)
       response.json must not be null
     }

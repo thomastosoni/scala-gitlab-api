@@ -52,6 +52,7 @@ class GitlabAPI @Inject()(ws: WSClient,
   }
 
   def getUsers: Future[WSResponse] = {
+    println(gitlabUrl + "/users")
     ws.url(gitlabUrl + "/users").withHttpHeaders(authToken).get()
   }
 
@@ -169,77 +170,100 @@ class GitlabAPI @Inject()(ws: WSClient,
     */
 
   def getProjects(archived: Option[Boolean] = None,
+                  visibility: Option[String] = None,
                   orderBy: Option[String] = None,
                   sort: Option[String] = None,
-                  search: Option[String] = None): Future[WSResponse] = {
-    ws.url(gitlabUrl + "/projects").withHttpHeaders(authToken).withQueryStringParameters(
-      "archived" -> archived.map(archived => archived.toString).orNull,
-      "order_by" -> orderBy.orNull,
-      "sort" -> sort.orNull,
-      "search" -> search.orNull
-    ).get()
+                  search: Option[String] = None,
+                  simple: Option[Boolean] = None,
+                  owned: Option[Boolean] = None,
+                  membership: Option[Boolean] = None,
+                  starred: Option[Boolean] = None,
+                  statistics: Option[Boolean] = None,
+                  withIssuesEnabled: Option[Boolean] = None,
+                  withMergeRequestsEnabled: Option[Boolean] = None): Future[WSResponse] = {
+    val queryStringParams = List(
+      archived.map("archived" -> _.toString),
+      visibility.map("visibility" -> _.toString),
+      orderBy.map("order_by" -> _.toString),
+      sort.map("sort" -> _.toString),
+      search.map("search" -> _.toString),
+      simple.map("simple" -> _.toString),
+      owned.map("owned" -> _.toString),
+      membership.map("membership" -> _.toString),
+      starred.map("starred" -> _.toString),
+      statistics.map("statistics" -> _.toString),
+      withIssuesEnabled.map("with_issues_enabled" -> _.toString),
+      withMergeRequestsEnabled.map("with_merge_requests_enabled" -> _.toString)
+    ).flatten
+
+    ws.url(gitlabUrl + "/projects").withHttpHeaders(authToken).withQueryStringParameters(queryStringParams: _*).get()
   }
 
-  def getOwnedProjects: Future[WSResponse] = {
-    ws.url(gitlabUrl + "/projects/owned").withHttpHeaders(authToken).get()
-  }
-
-  def getAllProjects: Future[WSResponse] = {
-    ws.url(gitlabUrl + "/projects/all").withHttpHeaders(authToken).get()
-  }
-
-  def getProject(projectId: Int): Future[WSResponse] = {
-    ws.url(gitlabUrl + "/projects/" + projectId).withHttpHeaders(authToken).get()
-  }
-
-  // TODO should work too
-  //  def getProject(nameOrNamespace: String): Future[WSResponse] = {
-  //    val url = gitlabUrl + "/projects/" + nameOrNamespace + java.net.URLEncoder.encode("/" + nameOrNamespace, "UTF-8")
-  //    logger.error(url)
-  //    WS.url(url).withHttpHeaders(authToken).get()
-  //  }
-
-  def getProject(projectName: String,
-                 perPage: Option[String] = None,
-                 page: Option[String] = None,
-                 orderBy: Option[String] = None,
-                 sort: Option[String] = None): Future[WSResponse] = {
-    ws.url(gitlabUrl + "/projects/search/" + projectName).withHttpHeaders(authToken).withQueryStringParameters(
-      "per_page" -> perPage.orNull,
-      "page" -> page.orNull,
-      "order_by" -> orderBy.orNull,
-      "sort" -> sort.orNull
-    ).get()
+  def getProject(projectId: Int, statistics: Option[Boolean] = None): Future[WSResponse] = {
+    val queryStringParams = List(statistics.map("statistics" -> _.toString)).flatten
+    ws.url(gitlabUrl + "/projects/" + projectId).withHttpHeaders(authToken).withQueryStringParameters(queryStringParams: _*).get()
   }
 
   def getProjectEvents(projectId: Int): Future[WSResponse] = {
     ws.url(gitlabUrl + "/projects/" + projectId + "/events").withHttpHeaders(authToken).get()
   }
 
-  def createProject(name: String,
+  def createProject(name: Option[String] = None,
                     path: Option[String] = None,
                     namespaceId: Option[Int] = None,
+                    defaultBranch: Option[String] = None,
                     description: Option[String] = None,
                     issuesEnabled: Option[Boolean] = None,
                     mergeRequestsEnabled: Option[Boolean] = None,
+                    jobsEnabled: Option[Boolean] = None,
                     wikiEnabled: Option[Boolean] = None,
                     snippetsEnabled: Option[Boolean] = None,
-                    public: Option[Boolean] = None,
-                    visibilityLevel: Option[Int] = None,
-                    importUrl: Option[String] = None): Future[WSResponse] = {
+                    resolveOutdatedDiffDiscussions: Option[Boolean] = None,
+                    containerRegistryEnabled: Option[Boolean] = None,
+                    sharedRunnersEnabled: Option[Boolean] = None,
+                    visibility: Option[String] = None,
+                    importUrl: Option[String] = None,
+                    publicJobs: Option[Boolean] = None,
+                    onlyAllowMergeIfPipelineSucceeds: Option[Boolean] = None,
+                    onlyAllowMergeIfAllDiscussionsAreResolved: Option[Boolean] = None,
+                    lfsEnabled: Option[Boolean] = None,
+                    requestAccessEnabled: Option[Boolean] = None,
+                    tagList: Option[Array[String]] = None,
+                    printingMergeRequestLinkEnabled: Option[Boolean] = None,
+                    ciConfigPath: Option[String] = None,
+                    repositoryStorage: Option[String] = None,
+                    approvalsBeforeMerge: Option[Int] = None): Future[WSResponse] = {
+    if (name.isEmpty && path.isEmpty) throw new IllegalArgumentException("Either name or path must be defined")
+
     ws.url(gitlabUrl + "/projects").withHttpHeaders(authToken).post(Extraction.decompose(
       Project(
-        name,
-        path,
-        namespaceId,
-        description,
-        issuesEnabled,
-        mergeRequestsEnabled,
-        wikiEnabled,
-        snippetsEnabled,
-        public,
-        visibilityLevel,
-        importUrl
+        name = name,
+        path = path,
+        namespaceId = namespaceId,
+        defaultBranch = defaultBranch,
+        description = description,
+        issuesEnabled = issuesEnabled,
+        mergeRequestsEnabled = mergeRequestsEnabled,
+        jobsEnabled = jobsEnabled,
+        wikiEnabled = wikiEnabled,
+        snippetsEnabled = snippetsEnabled,
+        resolveOutdatedDiffDiscussions = resolveOutdatedDiffDiscussions,
+        containerRegistryEnabled = containerRegistryEnabled,
+        sharedRunnersEnabled = sharedRunnersEnabled,
+        visibility = visibility,
+        importUrl = importUrl,
+        publicJobs = publicJobs,
+        onlyAllowMergeIfPipelineSucceeds = onlyAllowMergeIfPipelineSucceeds,
+        onlyAllowMergeIfAllDiscussionsAreResolved = onlyAllowMergeIfAllDiscussionsAreResolved,
+        lfsEnabled = lfsEnabled,
+        requestAccessEnabled = requestAccessEnabled,
+        tagList = tagList,
+        // TODO avatar
+        avatar = None,
+        printingMergeRequestLinkEnabled = printingMergeRequestLinkEnabled,
+        ciConfigPath = ciConfigPath,
+        repositoryStorage = repositoryStorage,
+        approvalsBeforeMerge = approvalsBeforeMerge
       )).underscoreKeys
     )
   }
@@ -248,27 +272,57 @@ class GitlabAPI @Inject()(ws: WSClient,
                            name: String,
                            path: Option[String] = None,
                            namespaceId: Option[Int] = None,
+                           defaultBranch: Option[String] = None,
                            description: Option[String] = None,
                            issuesEnabled: Option[Boolean] = None,
                            mergeRequestsEnabled: Option[Boolean] = None,
+                           jobsEnabled: Option[Boolean] = None,
                            wikiEnabled: Option[Boolean] = None,
                            snippetsEnabled: Option[Boolean] = None,
-                           public: Option[Boolean] = None,
-                           visibilityLevel: Option[Int] = None,
-                           importUrl: Option[String] = None): Future[WSResponse] = {
-    ws.url(gitlabUrl + "/projects/user/" + userId).withHttpHeaders(authToken).post(Extraction.decompose(
+                           resolveOutdatedDiffDiscussions: Option[Boolean] = None,
+                           containerRegistryEnabled: Option[Boolean] = None,
+                           sharedRunnersEnabled: Option[Boolean] = None,
+                           visibility: Option[String] = None,
+                           importUrl: Option[String] = None,
+                           publicJobs: Option[Boolean] = None,
+                           onlyAllowMergeIfPipelineSucceeds: Option[Boolean] = None,
+                           onlyAllowMergeIfAllDiscussionsAreResolved: Option[Boolean] = None,
+                           lfsEnabled: Option[Boolean] = None,
+                           requestAccessEnabled: Option[Boolean] = None,
+                           tagList: Option[Array[String]] = None,
+                           printingMergeRequestLinkEnabled: Option[Boolean] = None,
+                           ciConfigPath: Option[String] = None,
+                           repositoryStorage: Option[String] = None,
+                           approvalsBeforeMerge: Option[Int] = None): Future[WSResponse] = {
+    ws.url(gitlabUrl + s"/projects/user/$userId").withHttpHeaders(authToken).post(Extraction.decompose(
       Project(
-        name,
-        path,
-        namespaceId,
-        description,
-        issuesEnabled,
-        mergeRequestsEnabled,
-        wikiEnabled,
-        snippetsEnabled,
-        public,
-        visibilityLevel,
-        importUrl
+        name = Some(name),
+        path = path,
+        namespaceId = namespaceId,
+        defaultBranch = defaultBranch,
+        description = description,
+        issuesEnabled = issuesEnabled,
+        mergeRequestsEnabled = mergeRequestsEnabled,
+        jobsEnabled = jobsEnabled,
+        wikiEnabled = wikiEnabled,
+        snippetsEnabled = snippetsEnabled,
+        resolveOutdatedDiffDiscussions = resolveOutdatedDiffDiscussions,
+        containerRegistryEnabled = containerRegistryEnabled,
+        sharedRunnersEnabled = sharedRunnersEnabled,
+        visibility = visibility,
+        importUrl = importUrl,
+        publicJobs = publicJobs,
+        onlyAllowMergeIfPipelineSucceeds = onlyAllowMergeIfPipelineSucceeds,
+        onlyAllowMergeIfAllDiscussionsAreResolved = onlyAllowMergeIfAllDiscussionsAreResolved,
+        lfsEnabled = lfsEnabled,
+        requestAccessEnabled = requestAccessEnabled,
+        tagList = tagList,
+        // TODO avatar
+        avatar = None,
+        printingMergeRequestLinkEnabled = printingMergeRequestLinkEnabled,
+        ciConfigPath = ciConfigPath,
+        repositoryStorage = repositoryStorage,
+        approvalsBeforeMerge = approvalsBeforeMerge
       )).underscoreKeys
     )
   }
@@ -278,7 +332,7 @@ class GitlabAPI @Inject()(ws: WSClient,
   //    WS.url(gitlabUrl + "/projects/forks/" + projectId).withHttpHeaders(authToken).post(Json.obj("id" -> projectId))
   //  }
 
-  def deleteProject(projectId: Int): Future[WSResponse] = {
+  def removeProject(projectId: Int): Future[WSResponse] = {
     ws.url(gitlabUrl + "/projects/" + projectId).withHttpHeaders(authToken).delete()
   }
 

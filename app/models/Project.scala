@@ -1,13 +1,29 @@
 package models
 
-case class Project(name: String,
+case class Project(name: Option[String] = None,
                    path: Option[String] = None,
                    namespaceId: Option[Int] = None,
+                   defaultBranch: Option[String] = None,
                    description: Option[String] = None,
                    issuesEnabled: Option[Boolean] = None,
                    mergeRequestsEnabled: Option[Boolean] = None,
+                   jobsEnabled: Option[Boolean] = None,
                    wikiEnabled: Option[Boolean] = None,
                    snippetsEnabled: Option[Boolean] = None,
-                   public: Option[Boolean] = None,
-                   visibilityLevel: Option[Int] = None,
-                   importUrl: Option[String] = None)
+                   resolveOutdatedDiffDiscussions: Option[Boolean] = None,
+                   containerRegistryEnabled: Option[Boolean] = None,
+                   sharedRunnersEnabled: Option[Boolean] = None,
+                   visibility: Option[String] = None,
+                   importUrl: Option[String] = None,
+                   publicJobs: Option[Boolean] = None,
+                   onlyAllowMergeIfPipelineSucceeds: Option[Boolean] = None,
+                   onlyAllowMergeIfAllDiscussionsAreResolved: Option[Boolean] = None,
+                   lfsEnabled: Option[Boolean] = None,
+                   requestAccessEnabled: Option[Boolean] = None,
+                   tagList: Option[Array[String]] = None,
+                   // TODO mixed?
+                   avatar: Option[String] = None,
+                   printingMergeRequestLinkEnabled: Option[Boolean] = None,
+                   ciConfigPath: Option[String] = None,
+                   repositoryStorage: Option[String] = None,
+                   approvalsBeforeMerge: Option[Int] = None)
